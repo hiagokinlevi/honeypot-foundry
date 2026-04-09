@@ -1,7 +1,10 @@
 """Tests for SIEM format adapters."""
 import json
 from datetime import datetime, timezone
+
+from collectors.transports import CEFSyslogTransport, ElasticBulkTransport, SplunkHECTransport
 from collectors.siem_adapter import to_splunk_hec, to_elastic_bulk, to_cef
+from collectors.writer import EventWriter
 from honeypots.common.event import HoneypotEvent, ServiceType
 
 
@@ -46,3 +49,126 @@ def test_cef_no_username():
     event = _make_event()
     cef = to_cef(event)
     assert "duser=" not in cef
+
+
+def test_splunk_transport_posts_json(monkeypatch):
+    event = _make_event(username="admin")
+    captured = {}
+
+    class _Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+    def fake_urlopen(req, timeout):
+        captured["url"] = req.full_url
+        captured["timeout"] = timeout
+        captured["authorization"] = req.headers["Authorization"]
+        captured["content_type"] = req.headers["Content-type"]
+        captured["body"] = json.loads(req.data.decode("utf-8"))
+        return _Response()
+
+    monkeypatch.setattr("collectors.transports.request.urlopen", fake_urlopen)
+
+    transport = SplunkHECTransport(
+        endpoint_url="https://splunk.example.com/services/collector/event",
+        token="secret-token",
+        index="security",
+        source="sensor-a",
+    )
+    transport.send(event)
+
+    assert captured["url"].endswith("/services/collector/event")
+    assert captured["timeout"] == 5.0
+    assert captured["authorization"] == "Splunk secret-token"
+    assert captured["content_type"] == "application/json"
+    assert captured["body"]["index"] == "security"
+    assert captured["body"]["source"] == "sensor-a"
+
+
+def test_elastic_transport_posts_ndjson_with_basic_auth(monkeypatch):
+    event = _make_event()
+    captured = {}
+
+    class _Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+    def fake_urlopen(req, timeout):
+        captured["url"] = req.full_url
+        captured["timeout"] = timeout
+        captured["authorization"] = req.headers["Authorization"]
+        captured["content_type"] = req.headers["Content-type"]
+        captured["body"] = req.data.decode("utf-8")
+        return _Response()
+
+    monkeypatch.setattr("collectors.transports.request.urlopen", fake_urlopen)
+
+    transport = ElasticBulkTransport(
+        endpoint_url="https://elastic.example.com/_bulk",
+        index="security-events",
+        username="elastic",
+        password="changeme",
+    )
+    transport.send(event)
+
+    assert captured["url"].endswith("/_bulk")
+    assert captured["timeout"] == 5.0
+    assert captured["authorization"].startswith("Basic ")
+    assert captured["content_type"] == "application/x-ndjson"
+    assert '"_index": "security-events"' in captured["body"]
+    assert '"source_ip": "1.2.3.4"' in captured["body"]
+
+
+def test_cef_syslog_transport_builds_tcp_message(monkeypatch):
+    event = _make_event(username="root")
+    captured = {}
+
+    class _Socket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def sendall(self, data):
+            captured["data"] = data.decode("utf-8")
+
+    def fake_create_connection(address, timeout):
+        captured["address"] = address
+        captured["timeout"] = timeout
+        return _Socket()
+
+    monkeypatch.setattr("collectors.transports.socket.create_connection", fake_create_connection)
+    monkeypatch.setattr("collectors.transports.socket.gethostname", lambda: "sensor-node")
+
+    transport = CEFSyslogTransport(host="syslog.example.com", port=6514, protocol="tcp")
+    transport.send(event)
+
+    assert captured["address"] == ("syslog.example.com", 6514)
+    assert captured["timeout"] == 5.0
+    assert "sensor-node honeypot-foundry: CEF:0|" in captured["data"]
+    assert "duser=root" in captured["data"]
+
+
+def test_event_writer_preserves_output_when_transport_fails(capsys):
+    event = _make_event()
+
+    class BrokenTransport:
+        def send(self, _event):
+            raise RuntimeError("offline")
+
+        def close(self):
+            return None
+
+    with EventWriter(transports=[BrokenTransport()]) as writer:
+        writer.write(event)
+
+    captured = capsys.readouterr()
+    assert '"source_ip": "1.2.3.4"' in captured.out
+    assert "transport error" in captured.err

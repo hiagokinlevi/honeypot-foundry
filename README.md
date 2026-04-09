@@ -54,7 +54,28 @@ honeypot run-rdp --port 3389 --output-file events.jsonl
 
 # Print Helm chart path and deployment guidance
 honeypot show-helm
+
+# Forward live events to Splunk and Microsoft Sentinel-compatible syslog
+honeypot run-http \
+  --port 8080 \
+  --output-file events.jsonl \
+  --splunk-hec-url https://splunk.example.com:8088/services/collector/event \
+  --splunk-hec-token YOUR_HEC_TOKEN \
+  --cef-syslog-host syslog-ng.internal \
+  --cef-syslog-port 6514 \
+  --cef-syslog-protocol tcp
 ```
+
+Each `run-*` command can now forward live events to one or more SIEM endpoints
+while still writing local JSONL telemetry:
+
+- `--splunk-hec-url` + `--splunk-hec-token` posts Splunk HEC events with configurable index/source fields
+- `--elastic-url` posts NDJSON batches to the Elastic/OpenSearch bulk API, optionally with basic auth
+- `--cef-syslog-host` sends CEF-over-syslog payloads to a syslog-ng or Sentinel relay over UDP or TCP
+
+The installed `honeypot` console script now resolves through a repository-unique
+wrapper so editable installs do not collide with other k1N repositories that
+also expose Click CLIs.
 
 ## Kubernetes Deployment
 
@@ -80,6 +101,12 @@ helm upgrade --install honeypot-foundry \
 ## Ethical Disclaimer
 
 Deploy only in environments you own or are explicitly authorized to monitor. This toolkit is for observation and telemetry collection only. It does not execute attacker commands, expose real services, or enable any form of offensive activity. Review applicable laws and organizational policies before deployment.
+
+## SIEM Forwarding Notes
+
+Live transport failures do not discard the local event stream. The honeypot
+continues writing to stdout and `--output-file`, and emits a stderr warning so
+operators can fix the remote connector without losing local evidence.
 
 ## How to Contribute
 

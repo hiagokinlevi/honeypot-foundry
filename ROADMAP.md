@@ -20,6 +20,6 @@
 - [x] NetworkPolicy isolation with default-deny egress
 
 ## v0.4 — SIEM Transport
-- [ ] Splunk HEC HTTP transport (configurable endpoint + token)
-- [ ] Elastic HTTP bulk transport
-- [ ] Microsoft Sentinel CEF via syslog-ng
+- [x] Splunk HEC HTTP transport (configurable endpoint + token)
+- [x] Elastic HTTP bulk transport
+- [x] Microsoft Sentinel CEF via syslog-ng

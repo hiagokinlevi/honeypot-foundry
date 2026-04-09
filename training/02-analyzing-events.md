@@ -122,34 +122,34 @@ jq -r 'select(.credential_observed != null) | .credential_observed' events.jsonl
 ### Splunk HEC (HTTP Event Collector)
 
 ```bash
-while IFS= read -r line; do
-  curl -s -X POST \
-    -H "Authorization: Splunk YOUR_HEC_TOKEN" \
-    -H "Content-Type: application/json" \
-    --data "{\"event\": $line}" \
-    https://splunk.example.com:8088/services/collector/event
-done < events.jsonl
+honeypot run-http \
+  --port 8080 \
+  --output-file events.jsonl \
+  --splunk-hec-url https://splunk.example.com:8088/services/collector/event \
+  --splunk-hec-token YOUR_HEC_TOKEN \
+  --splunk-index honeypot \
+  --splunk-source edge-decoy-1
 ```
 
 ### Elastic / OpenSearch (Bulk API)
 
-```python
-import json
-from pathlib import Path
-import httpx
+```bash
+honeypot run-api \
+  --port 8000 \
+  --elastic-url https://elastic.example.com/_bulk \
+  --elastic-index honeypot-events \
+  --elastic-username elastic \
+  --elastic-password changeme
+```
 
-events = [json.loads(l) for l in Path("events.jsonl").read_text().splitlines() if l]
-bulk_body = ""
-for event in events:
-    bulk_body += json.dumps({"index": {"_index": "honeypot-events"}}) + "\n"
-    bulk_body += json.dumps(event) + "\n"
+### Microsoft Sentinel via syslog-ng
 
-httpx.post(
-    "https://elastic.example.com/_bulk",
-    content=bulk_body,
-    headers={"Content-Type": "application/x-ndjson"},
-    auth=("user", "pass"),
-)
+```bash
+honeypot run-ssh \
+  --port 2222 \
+  --cef-syslog-host syslog-ng.internal \
+  --cef-syslog-port 6514 \
+  --cef-syslog-protocol tcp
 ```
 
 ### Filebeat / Logstash

@@ -58,16 +58,18 @@ Network connection
 │  • Writes to stdout (always)            │
 │  • Appends to JSONL file (if configured)│
 │    line-buffered for low-latency flush  │
+│  • Fan-outs optional live transports    │
+│    for Splunk, Elastic, and CEF/syslog  │
 └──────────────┬──────────────────────────┘
-               │  JSONL lines
+               │  JSONL lines + forwarded payloads
                ▼
 ┌─────────────────────────────────────────┐
-│         events.jsonl / stdout           │
+│   events.jsonl / stdout / SIEM sinks    │
 │                                         │
 │  One JSON object per line               │
 │  Schema: schemas/event_schema.json      │
-│  Ingestible by Splunk, Elastic,         │
-│  Filebeat, Logstash, etc.               │
+│  Direct live delivery to Splunk HEC,    │
+│  Elastic bulk APIs, and CEF/syslog      │
 └─────────────────────────────────────────┘
 ```
 
@@ -103,14 +105,30 @@ interaction is possible.
 
 ### `collectors/writer.py`
 
-Stateless output layer. Accepts `HoneypotEvent` objects and serializes them to JSONL. Opened in append mode with line buffering so events are immediately available to `tail -f` and streaming SIEM connectors.
+Stateless output layer. Accepts `HoneypotEvent` objects and serializes them to
+JSONL. Opened in append mode with line buffering so events are immediately
+available to `tail -f` and streaming SIEM connectors. When operators pass SIEM
+flags through the CLI it also fans events out to live transport backends
+without disabling the local stdout/JSONL evidence trail.
+
+### `collectors/transports.py`
+
+Opt-in delivery backends for:
+
+- Splunk HEC over HTTPS with configurable endpoint, token, index, and source
+- Elastic/OpenSearch bulk ingest over HTTPS using NDJSON payloads
+- CEF-over-syslog delivery for syslog-ng or Sentinel relays over UDP or TCP
+
+Transport errors are reported to stderr and do not stop local event capture.
 
 ### `cli/main.py`
 
 Click CLI entry point. Seven user-facing commands: `run-ssh`, `run-http`,
-`run-api`, `run-ftp`, `run-rdp`, `show-helm`, plus `healthcheck`. Wires
-together the server and writer with dependency injection (the writer's `write`
-method is passed as the event callback).
+`run-api`, `run-ftp`, `run-rdp`, `show-helm`, plus `healthcheck`. The `run-*`
+commands expose shared SIEM forwarding flags so the same capture workflow can
+ship live telemetry to Splunk, Elastic, or Sentinel-compatible syslog relays.
+The CLI wires together the server and writer with dependency injection (the
+writer's `write` method is passed as the event callback).
 
 ---
 
@@ -165,6 +183,10 @@ Internet
          │
          └── events.jsonl ──► Filebeat ──► Elastic / Splunk
 ```
+
+For teams that prefer direct delivery, the same host can ship live events with
+`--splunk-hec-url`, `--elastic-url`, or `--cef-syslog-host` while preserving
+the local JSONL spool as an evidence buffer.
 
 The honeypot host should have no access to internal networks. Treat it as untrusted infrastructure — it receives arbitrary attacker input.
 
