@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/hiagokinlevi/honeypot-foundry/schemas/event_schema.json",
+  "title": "HoneypotEvent",
+  "description": "Metadata record for a single decoy server connection attempt. Credentials are always masked before storage.",
+  "type": "object",
+  "required": ["timestamp", "service", "source_ip", "source_port"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp of the connection attempt (ISO 8601)."
+    },
+    "service": {
+      "type": "string",
+      "enum": ["ssh", "http", "api", "ftp"],
+      "description": "Decoy service that received the connection."
+    },
+    "source_ip": {
+      "type": "string",
+      "description": "IP address of the connecting client."
+    },
+    "source_port": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "Source TCP/UDP port of the connecting client."
+    },
+    "username": {
+      "type": ["string", "null"],
+      "description": "Username submitted in the authentication attempt, if any."
+    },
+    "credential_observed": {
+      "type": ["string", "null"],
+      "description": "Masked representation of the submitted credential. Format: [masked:len=N,hash_prefix=XXXXXXXX]. The raw value is never stored.",
+      "pattern": "^\\[masked:len=\\d+,hash_prefix=[0-9a-f]{8}\\]$"
+    },
+    "path": {
+      "type": ["string", "null"],
+      "description": "HTTP request path, if applicable."
+    },
+    "method": {
+      "type": ["string", "null"],
+      "description": "HTTP request method (GET, POST, etc.), if applicable."
+    },
+    "user_agent": {
+      "type": ["string", "null"],
+      "description": "User-Agent header value from the request, if present."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional service-specific metadata (e.g., SSH key type, HTTP content-type, FTP command/reply context).",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
