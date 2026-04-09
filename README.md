@@ -23,12 +23,11 @@ Security teams lack affordable, modular honeypot infrastructure for collecting f
 ## Structure
 
 ```
-honeypots/      — SSH, HTTP, API, and FTP honeypot modules
+honeypots/      — SSH, HTTP, API, FTP, and RDP honeypot modules
 collectors/     — Event collection and forwarding
-parsers/        — Log normalization
 schemas/        — JSON event schemas
 cli/            — Command-line interface
-examples/       — Docker and Kubernetes deployment examples
+helm/           — Kubernetes deployment chart with HPA/PDB/network policy
 training/       — Labs and tutorials for security teams
 docs/           — Architecture and operational guides
 ```
@@ -52,6 +51,30 @@ honeypot run-ftp --port 2121 --banner "Microsoft FTP Service" --output-file even
 
 # Start RDP banner observer on port 3389
 honeypot run-rdp --port 3389 --output-file events.jsonl
+
+# Print Helm chart path and deployment guidance
+honeypot show-helm
+```
+
+## Kubernetes Deployment
+
+The repository ships a Helm chart for deploying isolated decoy services into a
+cluster. By default it exposes SSH, HTTP, and API decoys, keeps FTP/RDP
+disabled until explicitly enabled, creates optional HPA/PDB resources, and
+applies a default-deny egress `NetworkPolicy` so a compromised pod cannot phone
+home.
+
+```bash
+helm upgrade --install honeypot-foundry \
+  ./helm/honeypot-foundry \
+  --namespace honeypot-foundry --create-namespace
+
+# Optional protocol toggles
+helm upgrade --install honeypot-foundry \
+  ./helm/honeypot-foundry \
+  --namespace honeypot-foundry --create-namespace \
+  --set services.ftp.enabled=true \
+  --set services.rdp.enabled=true
 ```
 
 ## Ethical Disclaimer

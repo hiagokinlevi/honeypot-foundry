@@ -7,6 +7,7 @@ Commands:
   run-api      Start the API observation server
   run-ftp      Start the FTP observation server
   run-rdp      Start the RDP banner observation server
+  show-helm    Print Helm chart usage guidance for Kubernetes deployment
   healthcheck  Verify required dependencies are available
 """
 import asyncio
@@ -138,6 +139,27 @@ def run_rdp(
                 await server.wait_closed()
 
         asyncio.run(_run())
+
+
+@cli.command()
+def show_helm() -> None:
+    """Show Helm chart path and quick deployment commands."""
+    chart_dir = Path(__file__).resolve().parent.parent / "helm" / "honeypot-foundry"
+    click.echo(f"Helm chart: {chart_dir}")
+    click.echo("")
+    click.echo("Quickstart:")
+    click.echo("  helm upgrade --install honeypot-foundry \\")
+    click.echo(f"    {chart_dir} \\")
+    click.echo("    --namespace honeypot-foundry --create-namespace")
+    click.echo("")
+    click.echo("Optional overrides:")
+    click.echo("  --set services.ssh.enabled=true")
+    click.echo("  --set services.http.enabled=true")
+    click.echo("  --set services.api.enabled=true")
+    click.echo("  --set services.ftp.enabled=true")
+    click.echo("  --set services.rdp.enabled=true")
+    click.echo("  --set autoscaling.enabled=true")
+    click.echo("  --set podDisruptionBudget.enabled=true")
 
 
 @cli.command()

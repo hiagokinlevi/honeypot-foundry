@@ -1,0 +1,6 @@
+apiVersion: v2
+name: honeypot-foundry
+description: Helm chart for deploying Honeypot Foundry multi-service decoys
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

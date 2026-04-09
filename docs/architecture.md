@@ -107,9 +107,10 @@ Stateless output layer. Accepts `HoneypotEvent` objects and serializes them to J
 
 ### `cli/main.py`
 
-Click CLI entry point. Six server commands: `run-ssh`, `run-http`, `run-api`,
-`run-ftp`, `run-rdp`, plus `healthcheck`. Wires together the server and writer
-with dependency injection (the writer's `write` method is passed as the event callback).
+Click CLI entry point. Seven user-facing commands: `run-ssh`, `run-http`,
+`run-api`, `run-ftp`, `run-rdp`, `show-helm`, plus `healthcheck`. Wires
+together the server and writer with dependency injection (the writer's `write`
+method is passed as the event callback).
 
 ---
 
@@ -123,6 +124,7 @@ with dependency injection (the writer's `write` method is passed as the event ca
 | No `session_requested` handler | Defense-in-depth: no shell even if auth were bypassed |
 | `docs_url=None, redoc_url=None` in FastAPI | Prevents automated API discovery by scanners |
 | FTP replies are static/safe | Prevents exposure of a real filesystem or data channel |
+| Kubernetes `NetworkPolicy` defaults to no egress | Limits blast radius if a pod is compromised |
 
 ---
 
@@ -165,3 +167,16 @@ Internet
 ```
 
 The honeypot host should have no access to internal networks. Treat it as untrusted infrastructure — it receives arbitrary attacker input.
+
+## Kubernetes Deployment Guardrails
+
+The Helm chart in [`helm/honeypot-foundry`](../helm/honeypot-foundry) deploys
+one workload per enabled protocol so security teams can expose only the decoys
+they want. The chart enables three containment controls:
+
+- `autoscaling.enabled` creates one HPA per enabled service for bursty scans
+- `podDisruptionBudget.enabled` preserves at least one replica during voluntary disruptions
+- `networkPolicy.enabled` applies ingress-only service exposure and default-deny egress
+
+This keeps the decoys reachable for inbound probes while preventing outbound
+connections from the pods unless the operator intentionally relaxes the policy.

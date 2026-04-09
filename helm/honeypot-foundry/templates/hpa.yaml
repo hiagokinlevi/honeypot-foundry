@@ -1,0 +1,29 @@
+{{- if .Values.autoscaling.enabled }}
+{{- $root := . -}}
+{{- range $name, $service := .Values.services }}
+{{- if $service.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "honeypot-foundry.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "honeypot-foundry.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "honeypot-foundry.fullname" $root }}-{{ $name }}
+  minReplicas: {{ $root.Values.autoscaling.minReplicas }}
+  maxReplicas: {{ $root.Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $root.Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+{{- end }}
+{{- end }}

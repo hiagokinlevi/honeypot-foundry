@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "honeypot-foundry.fullname" . }}-config
+  labels:
+    {{- include "honeypot-foundry.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: "{{ .Values.logLevel }}"

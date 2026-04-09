@@ -31,7 +31,10 @@ def test_extract_requested_protocols_returns_empty_for_non_matching_payload():
 @pytest.mark.asyncio
 async def test_rdp_observer_captures_request_and_returns_failure_frame():
     received: list[HoneypotEvent] = []
-    server = await start_rdp_banner_observer("127.0.0.1", 0, received.append)
+    try:
+        server = await start_rdp_banner_observer("127.0.0.1", 0, received.append)
+    except PermissionError as exc:
+        pytest.skip(f"local socket binding unavailable in this environment: {exc}")
     payload = bytes.fromhex("030000130ee000000000000100080003000000")
 
     try:

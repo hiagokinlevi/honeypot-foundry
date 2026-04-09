@@ -14,9 +14,10 @@
 - [x] RDP banner observer
 
 ## v0.3 — Kubernetes Deployment
-- [ ] Helm chart for multi-service deployment
-- [ ] Horizontal Pod Autoscaling for high-volume environments
-- [ ] PodDisruptionBudget for HA
+- [x] Helm chart for multi-service deployment
+- [x] Horizontal Pod Autoscaling for high-volume environments
+- [x] PodDisruptionBudget for HA
+- [x] NetworkPolicy isolation with default-deny egress
 
 ## v0.4 — SIEM Transport
 - [ ] Splunk HEC HTTP transport (configurable endpoint + token)

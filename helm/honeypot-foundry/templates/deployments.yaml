@@ -1,0 +1,56 @@
+{{- $root := . -}}
+{{- range $name, $service := .Values.services }}
+{{- if $service.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "honeypot-foundry.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "honeypot-foundry.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: {{ $root.Values.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "honeypot-foundry.name" $root }}
+      app.kubernetes.io/instance: {{ $root.Release.Name }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "honeypot-foundry.name" $root }}
+        app.kubernetes.io/instance: {{ $root.Release.Name }}
+        app.kubernetes.io/component: {{ $name }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: {{ $name }}
+          image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}"
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          args:
+            - "run-{{ $name }}"
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "{{ $service.port }}"
+          ports:
+            - name: {{ $name }}
+              containerPort: {{ $service.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "honeypot-foundry.fullname" $root }}-config
+          resources:
+            {{- toYaml $root.Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+{{- end }}
+{{- end }}

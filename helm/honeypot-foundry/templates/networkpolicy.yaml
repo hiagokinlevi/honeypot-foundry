@@ -1,0 +1,29 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $root := . -}}
+{{- range $name, $service := .Values.services }}
+{{- if $service.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "honeypot-foundry.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "honeypot-foundry.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "honeypot-foundry.name" $root }}
+      app.kubernetes.io/instance: {{ $root.Release.Name }}
+      app.kubernetes.io/component: {{ $name }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: {{ $service.port }}
+  egress: []
+{{- end }}
+{{- end }}
+{{- end }}

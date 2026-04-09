@@ -97,7 +97,10 @@ class TestFTPObservationSession:
 @pytest.mark.asyncio
 async def test_ftp_server_captures_login_attempt_and_quit():
     received: list[HoneypotEvent] = []
-    server = await start_ftp_observation_server("127.0.0.1", 0, received.append)
+    try:
+        server = await start_ftp_observation_server("127.0.0.1", 0, received.append)
+    except PermissionError as exc:
+        pytest.skip(f"local socket binding unavailable in this environment: {exc}")
 
     try:
         sock = server.sockets[0]

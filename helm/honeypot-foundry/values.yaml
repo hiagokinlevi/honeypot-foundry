@@ -1,0 +1,51 @@
+replicas: 1
+
+image:
+  repository: hiagokinlevi/honeypot-foundry
+  tag: latest
+  pullPolicy: IfNotPresent
+
+logLevel: info
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+services:
+  ssh:
+    enabled: true
+    port: 2222
+    serviceType: ClusterIP
+  http:
+    enabled: true
+    port: 8080
+    serviceType: ClusterIP
+  api:
+    enabled: true
+    port: 8000
+    serviceType: ClusterIP
+  ftp:
+    enabled: false
+    port: 2121
+    serviceType: ClusterIP
+  rdp:
+    enabled: false
+    port: 3389
+    serviceType: ClusterIP
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
