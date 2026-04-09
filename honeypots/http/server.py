@@ -28,7 +28,7 @@ def build_http_app(event_callback: Callable[[HoneypotEvent], None]) -> FastAPI:
     Returns:
         Configured FastAPI application.
     """
-    app = FastAPI(title="k1n HTTP Observation Server", docs_url=None, redoc_url=None)
+    app = FastAPI(title="HTTP Observation Server", docs_url=None, redoc_url=None)
 
     @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
     async def catch_all(request: Request, path: str) -> JSONResponse:

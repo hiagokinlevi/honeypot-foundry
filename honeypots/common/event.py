@@ -18,6 +18,7 @@ class ServiceType(str, Enum):
     HTTP = "http"
     API = "api"
     FTP = "ftp"
+    RDP = "rdp"
 
 
 class HoneypotEvent(BaseModel):

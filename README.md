@@ -4,7 +4,7 @@ Defensive honeypot toolkit for observing attack telemetry, training blue teams, 
 
 ## Objective
 
-Provide modular, production-ready honeypot components that help security teams collect structured telemetry on attack patterns — without granting real access to attackers or exposing real infrastructure.
+Provide modular, production-ready honeypot components that help security teams collect structured telemetry on attack patterns without granting real access to attackers or exposing real infrastructure.
 
 ## Problem Solved
 
@@ -16,6 +16,7 @@ Security teams lack affordable, modular honeypot infrastructure for collecting f
 - Monitoring web scanner behavior with HTTP honeypots
 - Studying API enumeration and token-guessing patterns
 - Capturing FTP credential probes and legacy service reconnaissance
+- Observing RDP negotiation probes and legacy remote access reconnaissance
 - Training SOC analysts on recognizing attack telemetry
 - Generating realistic attack event datasets for SIEM rule development
 
@@ -38,16 +39,19 @@ docs/           — Architecture and operational guides
 pip install -e ".[dev]"
 
 # Start SSH honeypot on port 2222
-k1n-honeypot run-ssh --port 2222 --output-file events.jsonl
+honeypot run-ssh --port 2222 --output-file events.jsonl
 
 # Start HTTP honeypot on port 8080
-k1n-honeypot run-http --port 8080 --output-file events.jsonl
+honeypot run-http --port 8080 --output-file events.jsonl
 
 # Start API honeypot on port 8000
-k1n-honeypot run-api --port 8000 --output-file events.jsonl
+honeypot run-api --port 8000 --output-file events.jsonl
 
 # Start FTP honeypot on port 2121
-k1n-honeypot run-ftp --port 2121 --banner "Microsoft FTP Service" --output-file events.jsonl
+honeypot run-ftp --port 2121 --banner "Microsoft FTP Service" --output-file events.jsonl
+
+# Start RDP banner observer on port 3389
+honeypot run-rdp --port 3389 --output-file events.jsonl
 ```
 
 ## Ethical Disclaimer

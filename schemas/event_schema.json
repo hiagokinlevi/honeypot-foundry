@@ -13,7 +13,7 @@
     },
     "service": {
       "type": "string",
-      "enum": ["ssh", "http", "api", "ftp"],
+      "enum": ["ssh", "http", "api", "ftp", "rdp"],
       "description": "Decoy service that received the connection."
     },
     "source_ip": {

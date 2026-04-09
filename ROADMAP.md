@@ -11,7 +11,7 @@
 - [x] API credential decoy (JWT/OAuth endpoints — always denies access)
 - [x] SIEM adapters: Splunk HEC, Elastic bulk, CEF/syslog
 - [x] FTP observation server
-- [ ] RDP banner observer
+- [x] RDP banner observer
 
 ## v0.3 — Kubernetes Deployment
 - [ ] Helm chart for multi-service deployment

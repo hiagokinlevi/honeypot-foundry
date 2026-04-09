@@ -1,8 +1,8 @@
-# Architecture — k1n Honeypot Foundry
+# Architecture — Honeypot Foundry
 
 ## Overview
 
-k1n Honeypot Foundry is a decoy server observation toolkit for defensive security teams. It runs fake SSH, HTTP, API, and FTP services that log connection attempts for threat intelligence. No legitimate users ever interact with these servers; all traffic is attacker-originated.
+Honeypot Foundry is a decoy server observation toolkit for defensive security teams. It runs fake SSH, HTTP, API, FTP, and RDP-banner services that log connection attempts for threat intelligence. No legitimate users ever interact with these servers; all traffic is attacker-originated.
 
 ---
 
@@ -28,6 +28,10 @@ Network connection
 │  FTP: FTPObservationSession             │
 │       USER/PASS always denied           │
 │       PWD/FEAT/SYST return safe decoys  │
+│                                         │
+│  RDP: Banner observer                   │
+│       captures negotiation probes       │
+│       returns static safe failure frame │
 └──────────────┬──────────────────────────┘
                │  raw event data
                ▼
@@ -90,13 +94,22 @@ attempts, responds to reconnaissance commands such as `SYST`, `FEAT`, and
 `PWD`, and always denies authentication. No directory listing, file transfer,
 or real filesystem access is exposed.
 
+### `honeypots/rdp/server.py`
+
+asyncio-based RDP negotiation observer. Captures source telemetry and the first
+packet payload, extracts requested protocol flags when present, and always
+returns a static negotiation failure frame. No session upgrade or desktop
+interaction is possible.
+
 ### `collectors/writer.py`
 
 Stateless output layer. Accepts `HoneypotEvent` objects and serializes them to JSONL. Opened in append mode with line buffering so events are immediately available to `tail -f` and streaming SIEM connectors.
 
 ### `cli/main.py`
 
-Click CLI entry point. Five commands: `run-ssh`, `run-http`, `run-api`, `run-ftp`, `healthcheck`. Wires together the server and writer with dependency injection (the writer's `write` method is passed as the event callback).
+Click CLI entry point. Six server commands: `run-ssh`, `run-http`, `run-api`,
+`run-ftp`, `run-rdp`, plus `healthcheck`. Wires together the server and writer
+with dependency injection (the writer's `write` method is passed as the event callback).
 
 ---
 
@@ -139,12 +152,13 @@ Internet
     │
     ▼
 [Firewall / Security Group]
-    │  Allow inbound TCP 2222, 2121, 8080
+    │  Allow inbound TCP 2222, 2121, 3389, 8080
     │  Block outbound from honeypot host (optional but recommended)
     ▼
 [Honeypot Host]
     ├── run-ssh  (port 2222)
     ├── run-ftp  (port 2121)
+    ├── run-rdp  (port 3389)
     └── run-http (port 8080)
          │
          └── events.jsonl ──► Filebeat ──► Elastic / Splunk

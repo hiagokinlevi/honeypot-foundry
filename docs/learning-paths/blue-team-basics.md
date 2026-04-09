@@ -127,7 +127,7 @@ Do attacks cluster at certain hours? What does that suggest about attacker geogr
 
 ## Module 4 — Credential Masking and Privacy
 
-The k1n Honeypot Foundry never stores raw credentials. Understanding why this matters:
+Honeypot Foundry never stores raw credentials. Understanding why this matters:
 
 ### Why mask credentials?
 

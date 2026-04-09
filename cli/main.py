@@ -6,6 +6,7 @@ Commands:
   run-http     Start the HTTP observation server
   run-api      Start the API observation server
   run-ftp      Start the FTP observation server
+  run-rdp      Start the RDP banner observation server
   healthcheck  Verify required dependencies are available
 """
 import asyncio
@@ -15,7 +16,7 @@ import click
 
 @click.group()
 def cli() -> None:
-    """k1n Honeypot Foundry — decoy server observation toolkit."""
+    """Honeypot Foundry — decoy server observation toolkit."""
 
 
 @cli.command()
@@ -99,6 +100,40 @@ def run_ftp(
                 response_delay_ms=response_delay_ms,
             )
             click.echo(f"FTP observation server listening on {host}:{port}")
+            async with server:
+                await server.wait_closed()
+
+        asyncio.run(_run())
+
+
+@cli.command()
+@click.option("--host", default="0.0.0.0", show_default=True)
+@click.option("--port", default=3389, show_default=True)
+@click.option("--read-timeout-s", default=2.0, show_default=True, type=float)
+@click.option("--response-delay-ms", default=0, show_default=True, type=int)
+@click.option("--output-file", default=None, help="JSONL output file path")
+def run_rdp(
+    host: str,
+    port: int,
+    read_timeout_s: float,
+    response_delay_ms: int,
+    output_file: str | None,
+) -> None:
+    """Start the RDP banner observation server."""
+    from collectors.writer import EventWriter
+    from honeypots.rdp.server import start_rdp_banner_observer
+
+    out_path = Path(output_file) if output_file else None
+    with EventWriter(out_path) as writer:
+        async def _run() -> None:
+            server = await start_rdp_banner_observer(
+                host,
+                port,
+                writer.write,
+                read_timeout_s=read_timeout_s,
+                response_delay_ms=response_delay_ms,
+            )
+            click.echo(f"RDP banner observation server listening on {host}:{port}")
             async with server:
                 await server.wait_closed()
 

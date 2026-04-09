@@ -4,7 +4,7 @@
 
 A decoy (honeypot) server is a network-accessible service that looks real to an attacker but has no legitimate users. Its sole purpose is observation: every connection attempt reveals information about attacker tooling, credential lists, and targeting behavior — all without risk to production infrastructure.
 
-The k1n Honeypot Foundry provides two observation servers:
+Honeypot Foundry provides two observation servers:
 
 | Server | Protocol | Default Port | What it captures |
 |--------|----------|--------------|-----------------|
