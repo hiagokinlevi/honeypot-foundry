@@ -152,6 +152,11 @@ honeypot run-ssh \
   --cef-syslog-protocol tcp
 ```
 
+CEF/syslog forwarding escapes attacker-controlled values such as usernames,
+paths, methods, and user agents before delivery. Downstream parser fields stay
+stable even when an observed client sends CEF delimiters or embedded line
+breaks.
+
 ### Filebeat / Logstash
 
 Point Filebeat at `events.jsonl` with `json.message_key` decoding:

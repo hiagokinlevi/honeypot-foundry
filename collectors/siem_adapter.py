@@ -15,6 +15,27 @@ from datetime import timezone
 from honeypots.common.event import HoneypotEvent
 
 
+def _escape_cef_header(value: str) -> str:
+    """Escape CEF header delimiters in static formatter fields."""
+    return (
+        value.replace("\\", "\\\\")
+        .replace("|", "\\|")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+    )
+
+
+def _escape_cef_extension(value: object) -> str:
+    """Escape attacker-controlled CEF extension values for syslog delivery."""
+    return (
+        str(value)
+        .replace("\\", "\\\\")
+        .replace("=", "\\=")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+    )
+
+
 def to_splunk_hec(event: HoneypotEvent, index: str = "honeypot", source: str = "honeypot-foundry") -> dict:
     """
     Format a HoneypotEvent for Splunk HEC (HTTP Event Collector).
@@ -88,20 +109,24 @@ def to_cef(event: HoneypotEvent, device_vendor: str = "k1N", device_product: str
     severity = 5
 
     ext_parts = [
-        f"src={event.source_ip}",
-        f"spt={event.source_port}",
-        f"rt={int(event.timestamp.timestamp() * 1000)}",
+        f"src={_escape_cef_extension(event.source_ip)}",
+        f"spt={_escape_cef_extension(event.source_port)}",
+        f"rt={_escape_cef_extension(int(event.timestamp.timestamp() * 1000))}",
     ]
     if event.username:
-        ext_parts.append(f"duser={event.username}")
+        ext_parts.append(f"duser={_escape_cef_extension(event.username)}")
     if event.path:
-        ext_parts.append(f"request={event.path}")
+        ext_parts.append(f"request={_escape_cef_extension(event.path)}")
     if event.method:
-        ext_parts.append(f"requestMethod={event.method}")
+        ext_parts.append(f"requestMethod={_escape_cef_extension(event.method)}")
     if event.user_agent:
         # CEF extensions use cs1 for custom string fields
-        ext_parts.append(f"cs1={event.user_agent}")
+        ext_parts.append(f"cs1={_escape_cef_extension(event.user_agent)}")
         ext_parts.append("cs1Label=UserAgent")
 
     extension = " ".join(ext_parts)
-    return f"CEF:0|{device_vendor}|{device_product}|1.0|{sig_id}|{name}|{severity}|{extension}"
+    return (
+        f"CEF:0|{_escape_cef_header(device_vendor)}|"
+        f"{_escape_cef_header(device_product)}|1.0|{sig_id}|"
+        f"{_escape_cef_header(name)}|{severity}|{extension}"
+    )

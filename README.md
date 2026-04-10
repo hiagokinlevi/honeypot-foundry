@@ -107,6 +107,9 @@ Deploy only in environments you own or are explicitly authorized to monitor. Thi
 Live transport failures do not discard the local event stream. The honeypot
 continues writing to stdout and `--output-file`, and emits a stderr warning so
 operators can fix the remote connector without losing local evidence.
+CEF/syslog forwarding also escapes attacker-controlled values before delivery,
+including usernames, request paths, methods, and user agents, so crafted input
+cannot add fake CEF fields or line breaks in downstream SIEM parsers.
 
 ## How to Contribute
 

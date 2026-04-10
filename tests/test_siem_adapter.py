@@ -51,6 +51,24 @@ def test_cef_no_username():
     assert "duser=" not in cef
 
 
+def test_cef_escapes_attacker_controlled_extension_values():
+    event = _make_event(
+        username="root role=admin",
+        path="/login\nsrc=10.0.0.9",
+        method="POST",
+        user_agent="scanner\\probe\r\ncs1Label=Injected",
+    )
+
+    cef = to_cef(event, device_vendor="k1N|Lab", device_product="Honeypot|Foundry")
+
+    assert cef.startswith("CEF:0|k1N\\|Lab|Honeypot\\|Foundry|")
+    assert "duser=root role\\=admin" in cef
+    assert "request=/login\\nsrc\\=10.0.0.9" in cef
+    assert "cs1=scanner\\\\probe\\r\\ncs1Label\\=Injected" in cef
+    assert "\n" not in cef
+    assert "\r" not in cef
+
+
 def test_splunk_transport_posts_json(monkeypatch):
     event = _make_event(username="admin")
     captured = {}

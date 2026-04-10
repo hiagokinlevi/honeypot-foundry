@@ -119,6 +119,10 @@ Opt-in delivery backends for:
 - Elastic/OpenSearch bulk ingest over HTTPS using NDJSON payloads
 - CEF-over-syslog delivery for syslog-ng or Sentinel relays over UDP or TCP
 
+CEF formatting escapes attacker-controlled extension values before syslog
+delivery so usernames, request paths, methods, and user agents cannot inject
+new extension keys or line breaks into downstream SIEM parsers.
+
 Transport errors are reported to stderr and do not stop local event capture.
 
 ### `cli/main.py`
