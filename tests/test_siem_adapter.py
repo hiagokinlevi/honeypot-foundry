@@ -113,6 +113,16 @@ def test_splunk_transport_rejects_non_http_endpoint():
         SplunkHECTransport(endpoint_url="file:///tmp/hec", token="secret-token")
 
 
+@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
+def test_splunk_transport_rejects_invalid_timeout(timeout_s):
+    with pytest.raises(ValueError, match="positive finite number"):
+        SplunkHECTransport(
+            endpoint_url="https://splunk.example.com/services/collector/event",
+            token="secret-token",
+            timeout_s=timeout_s,
+        )
+
+
 def test_elastic_transport_posts_ndjson_with_basic_auth(monkeypatch):
     event = _make_event()
     captured = {}
@@ -155,6 +165,15 @@ def test_elastic_transport_requires_hostname():
         ElasticBulkTransport(endpoint_url="https:///bulk")
 
 
+@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
+def test_elastic_transport_rejects_invalid_timeout(timeout_s):
+    with pytest.raises(ValueError, match="positive finite number"):
+        ElasticBulkTransport(
+            endpoint_url="https://elastic.example.com/_bulk",
+            timeout_s=timeout_s,
+        )
+
+
 def test_cef_syslog_transport_builds_tcp_message(monkeypatch):
     event = _make_event(username="root")
     captured = {}
@@ -185,7 +204,6 @@ def test_cef_syslog_transport_builds_tcp_message(monkeypatch):
     assert "sensor-node honeypot-foundry: CEF:0|" in captured["data"]
     assert "duser=root" in captured["data"]
 
-
 def test_cef_syslog_transport_rejects_unknown_protocol():
     with pytest.raises(ValueError, match="tcp or udp"):
         CEFSyslogTransport(host="syslog.example.com", protocol="tls")
@@ -204,6 +222,12 @@ def test_cef_syslog_transport_rejects_whitespace_app_name():
 def test_cef_syslog_transport_rejects_invalid_facility():
     with pytest.raises(ValueError, match="facility must be between 0 and 23"):
         CEFSyslogTransport(host="syslog.example.com", facility=24)
+
+
+@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
+def test_cef_syslog_transport_rejects_invalid_timeout(timeout_s):
+    with pytest.raises(ValueError, match="positive finite number"):
+        CEFSyslogTransport(host="syslog.example.com", timeout_s=timeout_s)
 
 
 def test_event_writer_preserves_output_when_transport_fails(capsys):
