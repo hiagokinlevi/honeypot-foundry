@@ -37,6 +37,17 @@ def _validate_http_endpoint(endpoint_url: str, *, transport_name: str) -> None:
         raise ValueError(f"{transport_name} endpoint must include a hostname.")
 
 
+def _validate_syslog_endpoint(host: str, *, port: int, protocol: str) -> None:
+    if not host or not host.strip():
+        raise ValueError("CEF/syslog host must not be empty.")
+    if any(ch.isspace() for ch in host):
+        raise ValueError("CEF/syslog host must not contain whitespace.")
+    if not 1 <= port <= 65535:
+        raise ValueError("CEF/syslog port must be between 1 and 65535.")
+    if protocol not in {"udp", "tcp"}:
+        raise ValueError("CEF/syslog protocol must be tcp or udp.")
+
+
 @dataclass(slots=True)
 class SplunkHECTransport(EventTransport):
     endpoint_url: str
@@ -102,6 +113,9 @@ class CEFSyslogTransport(EventTransport):
     app_name: str = "honeypot-foundry"
     facility: int = 20  # local4
     timeout_s: float = 5.0
+
+    def __post_init__(self) -> None:
+        _validate_syslog_endpoint(self.host, port=self.port, protocol=self.protocol)
 
     def send(self, event: HoneypotEvent) -> None:
         cef_payload = to_cef(event)

@@ -76,6 +76,25 @@ def test_build_transports_rejects_non_http_splunk_url():
     assert "Splunk HEC endpoint must use http or https." in str(exc_info.value)
 
 
+def test_build_transports_rejects_invalid_cef_port():
+    with pytest.raises(Exception) as exc_info:
+        build_transports(
+            splunk_hec_url=None,
+            splunk_hec_token=None,
+            splunk_index="honeypot",
+            splunk_source="honeypot-foundry",
+            elastic_url=None,
+            elastic_index="honeypot-events",
+            elastic_username=None,
+            elastic_password=None,
+            cef_syslog_host="sentinel-gateway",
+            cef_syslog_port=0,
+            cef_syslog_protocol="udp",
+        )
+
+    assert "CEF/syslog port must be between 1 and 65535." in str(exc_info.value)
+
+
 def test_run_http_help_shows_siem_options():
     result = CliRunner().invoke(cli, ["run-http", "--help"])
 

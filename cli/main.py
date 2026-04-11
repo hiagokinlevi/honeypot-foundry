@@ -100,13 +100,16 @@ def build_transports(
         raise click.ClickException("--elastic-url is required when Elastic credentials are set.")
 
     if cef_syslog_host:
-        transports.append(
-            CEFSyslogTransport(
-                host=cef_syslog_host,
-                port=cef_syslog_port,
-                protocol=cef_syslog_protocol,
+        try:
+            transports.append(
+                CEFSyslogTransport(
+                    host=cef_syslog_host,
+                    port=cef_syslog_port,
+                    protocol=cef_syslog_protocol,
+                )
             )
-        )
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
 
     return transports
 

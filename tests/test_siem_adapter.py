@@ -186,6 +186,16 @@ def test_cef_syslog_transport_builds_tcp_message(monkeypatch):
     assert "duser=root" in captured["data"]
 
 
+def test_cef_syslog_transport_rejects_unknown_protocol():
+    with pytest.raises(ValueError, match="tcp or udp"):
+        CEFSyslogTransport(host="syslog.example.com", protocol="tls")
+
+
+def test_cef_syslog_transport_rejects_whitespace_host():
+    with pytest.raises(ValueError, match="must not contain whitespace"):
+        CEFSyslogTransport(host="syslog relay")
+
+
 def test_event_writer_preserves_output_when_transport_fails(capsys):
     event = _make_event()
 
