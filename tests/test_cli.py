@@ -102,3 +102,20 @@ def test_run_http_help_shows_siem_options():
     assert "--splunk-hec-url" in result.output
     assert "--elastic-url" in result.output
     assert "--cef-syslog-host" in result.output
+
+
+def test_run_http_rejects_listener_port_outside_valid_range():
+    result = CliRunner().invoke(cli, ["run-http", "--port", "70000"])
+
+    assert result.exit_code == 2
+    assert "70000 is not in the range 1<=x<=65535" in result.output
+
+
+def test_run_http_rejects_cef_syslog_port_outside_valid_range():
+    result = CliRunner().invoke(
+        cli,
+        ["run-http", "--cef-syslog-host", "sentinel-gateway", "--cef-syslog-port", "0"],
+    )
+
+    assert result.exit_code == 2
+    assert "0 is not in the range 1<=x<=65535" in result.output

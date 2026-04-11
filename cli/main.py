@@ -22,6 +22,8 @@ from collectors.transports import (
     SplunkHECTransport,
 )
 
+VALID_PORT = click.IntRange(1, 65535)
+
 
 @click.group()
 def cli() -> None:
@@ -31,7 +33,7 @@ def cli() -> None:
 def siem_options(func):
     options = [
         click.option("--cef-syslog-protocol", type=click.Choice(["udp", "tcp"]), default="udp", show_default=True),
-        click.option("--cef-syslog-port", default=514, show_default=True, type=int),
+        click.option("--cef-syslog-port", default=514, show_default=True, type=VALID_PORT),
         click.option("--cef-syslog-host", default=None, help="Forward CEF/syslog events to the given host"),
         click.option("--elastic-password", default=None, help="Elastic/OpenSearch password"),
         click.option("--elastic-username", default=None, help="Elastic/OpenSearch username"),
@@ -116,7 +118,7 @@ def build_transports(
 
 @cli.command()
 @click.option("--host", default="0.0.0.0", show_default=True)
-@click.option("--port", default=2222, show_default=True)
+@click.option("--port", default=2222, show_default=True, type=VALID_PORT)
 @click.option("--host-key", default="./hostkey", show_default=True)
 @click.option("--output-file", default=None, help="JSONL output file path")
 @siem_options
@@ -167,7 +169,7 @@ def run_ssh(
 
 @cli.command()
 @click.option("--host", default="0.0.0.0", show_default=True)
-@click.option("--port", default=8080, show_default=True)
+@click.option("--port", default=8080, show_default=True, type=VALID_PORT)
 @click.option("--output-file", default=None, help="JSONL output file path")
 @siem_options
 def run_http(
@@ -212,7 +214,7 @@ def run_http(
 
 @cli.command()
 @click.option("--host", default="0.0.0.0", show_default=True)
-@click.option("--port", default=8000, show_default=True)
+@click.option("--port", default=8000, show_default=True, type=VALID_PORT)
 @click.option("--output-file", default=None, help="JSONL output file path")
 @siem_options
 def run_api(
@@ -257,7 +259,7 @@ def run_api(
 
 @cli.command()
 @click.option("--host", default="0.0.0.0", show_default=True)
-@click.option("--port", default=2121, show_default=True)
+@click.option("--port", default=2121, show_default=True, type=VALID_PORT)
 @click.option("--banner", default="Microsoft FTP Service", show_default=True)
 @click.option("--response-delay-ms", default=0, show_default=True, type=int)
 @click.option("--output-file", default=None, help="JSONL output file path")
@@ -316,7 +318,7 @@ def run_ftp(
 
 @cli.command()
 @click.option("--host", default="0.0.0.0", show_default=True)
-@click.option("--port", default=3389, show_default=True)
+@click.option("--port", default=3389, show_default=True, type=VALID_PORT)
 @click.option("--read-timeout-s", default=2.0, show_default=True, type=float)
 @click.option("--response-delay-ms", default=0, show_default=True, type=int)
 @click.option("--output-file", default=None, help="JSONL output file path")
