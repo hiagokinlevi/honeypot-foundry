@@ -2,6 +2,8 @@
 import json
 from datetime import datetime, timezone
 
+import pytest
+
 from collectors.transports import CEFSyslogTransport, ElasticBulkTransport, SplunkHECTransport
 from collectors.siem_adapter import to_splunk_hec, to_elastic_bulk, to_cef
 from collectors.writer import EventWriter
@@ -106,6 +108,11 @@ def test_splunk_transport_posts_json(monkeypatch):
     assert captured["body"]["source"] == "sensor-a"
 
 
+def test_splunk_transport_rejects_non_http_endpoint():
+    with pytest.raises(ValueError, match="http or https"):
+        SplunkHECTransport(endpoint_url="file:///tmp/hec", token="secret-token")
+
+
 def test_elastic_transport_posts_ndjson_with_basic_auth(monkeypatch):
     event = _make_event()
     captured = {}
@@ -141,6 +148,11 @@ def test_elastic_transport_posts_ndjson_with_basic_auth(monkeypatch):
     assert captured["content_type"] == "application/x-ndjson"
     assert '"_index": "security-events"' in captured["body"]
     assert '"source_ip": "1.2.3.4"' in captured["body"]
+
+
+def test_elastic_transport_requires_hostname():
+    with pytest.raises(ValueError, match="hostname"):
+        ElasticBulkTransport(endpoint_url="https:///bulk")
 
 
 def test_cef_syslog_transport_builds_tcp_message(monkeypatch):

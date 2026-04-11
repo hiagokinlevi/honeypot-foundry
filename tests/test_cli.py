@@ -57,6 +57,25 @@ def test_build_transports_returns_requested_backends():
     assert isinstance(transports[2], CEFSyslogTransport)
 
 
+def test_build_transports_rejects_non_http_splunk_url():
+    with pytest.raises(Exception) as exc_info:
+        build_transports(
+            splunk_hec_url="file:///tmp/hec",
+            splunk_hec_token="token",
+            splunk_index="honeypot",
+            splunk_source="honeypot-foundry",
+            elastic_url=None,
+            elastic_index="honeypot-events",
+            elastic_username=None,
+            elastic_password=None,
+            cef_syslog_host=None,
+            cef_syslog_port=514,
+            cef_syslog_protocol="udp",
+        )
+
+    assert "Splunk HEC endpoint must use http or https." in str(exc_info.value)
+
+
 def test_run_http_help_shows_siem_options():
     result = CliRunner().invoke(cli, ["run-http", "--help"])
 

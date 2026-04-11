@@ -13,6 +13,7 @@ import socket
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from urllib import request
+from urllib.parse import urlsplit
 
 from collectors.siem_adapter import to_cef, to_elastic_bulk, to_splunk_hec
 from honeypots.common.event import HoneypotEvent
@@ -28,6 +29,14 @@ class EventTransport:
         """Release any transport resources."""
 
 
+def _validate_http_endpoint(endpoint_url: str, *, transport_name: str) -> None:
+    parsed = urlsplit(endpoint_url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError(f"{transport_name} endpoint must use http or https.")
+    if not parsed.netloc:
+        raise ValueError(f"{transport_name} endpoint must include a hostname.")
+
+
 @dataclass(slots=True)
 class SplunkHECTransport(EventTransport):
     endpoint_url: str
@@ -35,6 +44,9 @@ class SplunkHECTransport(EventTransport):
     index: str = "honeypot"
     source: str = "honeypot-foundry"
     timeout_s: float = 5.0
+
+    def __post_init__(self) -> None:
+        _validate_http_endpoint(self.endpoint_url, transport_name="Splunk HEC")
 
     def send(self, event: HoneypotEvent) -> None:
         payload = json.dumps(
@@ -60,6 +72,9 @@ class ElasticBulkTransport(EventTransport):
     username: str | None = None
     password: str | None = None
     timeout_s: float = 5.0
+
+    def __post_init__(self) -> None:
+        _validate_http_endpoint(self.endpoint_url, transport_name="Elastic bulk")
 
     def send(self, event: HoneypotEvent) -> None:
         payload = to_elastic_bulk(event, index=self.index).encode("utf-8")

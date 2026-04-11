@@ -66,14 +66,17 @@ def build_transports(
     if splunk_hec_url:
         if not splunk_hec_token:
             raise click.ClickException("--splunk-hec-token is required when --splunk-hec-url is set.")
-        transports.append(
-            SplunkHECTransport(
-                endpoint_url=splunk_hec_url,
-                token=splunk_hec_token,
-                index=splunk_index,
-                source=splunk_source,
+        try:
+            transports.append(
+                SplunkHECTransport(
+                    endpoint_url=splunk_hec_url,
+                    token=splunk_hec_token,
+                    index=splunk_index,
+                    source=splunk_source,
+                )
             )
-        )
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
     elif splunk_hec_token:
         raise click.ClickException("--splunk-hec-url is required when --splunk-hec-token is set.")
 
@@ -82,14 +85,17 @@ def build_transports(
             raise click.ClickException(
                 "--elastic-username and --elastic-password must be provided together."
             )
-        transports.append(
-            ElasticBulkTransport(
-                endpoint_url=elastic_url,
-                index=elastic_index,
-                username=elastic_username,
-                password=elastic_password,
+        try:
+            transports.append(
+                ElasticBulkTransport(
+                    endpoint_url=elastic_url,
+                    index=elastic_index,
+                    username=elastic_username,
+                    password=elastic_password,
+                )
             )
-        )
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
     elif elastic_username or elastic_password:
         raise click.ClickException("--elastic-url is required when Elastic credentials are set.")
 
