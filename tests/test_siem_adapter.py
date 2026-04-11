@@ -115,7 +115,7 @@ def test_splunk_transport_rejects_non_http_endpoint():
 
 @pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
 def test_splunk_transport_rejects_invalid_timeout(timeout_s):
-    with pytest.raises(ValueError, match="positive finite number"):
+    with pytest.raises(ValueError, match="timeout must be a finite positive number"):
         SplunkHECTransport(
             endpoint_url="https://splunk.example.com/services/collector/event",
             token="secret-token",
@@ -167,7 +167,7 @@ def test_elastic_transport_requires_hostname():
 
 @pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
 def test_elastic_transport_rejects_invalid_timeout(timeout_s):
-    with pytest.raises(ValueError, match="positive finite number"):
+    with pytest.raises(ValueError, match="timeout must be a finite positive number"):
         ElasticBulkTransport(
             endpoint_url="https://elastic.example.com/_bulk",
             timeout_s=timeout_s,
@@ -204,6 +204,7 @@ def test_cef_syslog_transport_builds_tcp_message(monkeypatch):
     assert "sensor-node honeypot-foundry: CEF:0|" in captured["data"]
     assert "duser=root" in captured["data"]
 
+
 def test_cef_syslog_transport_rejects_unknown_protocol():
     with pytest.raises(ValueError, match="tcp or udp"):
         CEFSyslogTransport(host="syslog.example.com", protocol="tls")
@@ -226,7 +227,7 @@ def test_cef_syslog_transport_rejects_invalid_facility():
 
 @pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
 def test_cef_syslog_transport_rejects_invalid_timeout(timeout_s):
-    with pytest.raises(ValueError, match="positive finite number"):
+    with pytest.raises(ValueError, match="timeout must be a finite positive number"):
         CEFSyslogTransport(host="syslog.example.com", timeout_s=timeout_s)
 
 

@@ -60,9 +60,18 @@ def _validate_syslog_metadata(*, app_name: str, facility: int) -> None:
         raise ValueError("CEF/syslog facility must be between 0 and 23.")
 
 
-def _validate_timeout(timeout_s: float, *, transport_name: str) -> None:
-    if not math.isfinite(timeout_s) or timeout_s <= 0:
-        raise ValueError(f"{transport_name} timeout must be a positive finite number.")
+def _validate_timeout(timeout_s: float, *, transport_name: str) -> float:
+    try:
+        normalized_timeout = float(timeout_s)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"{transport_name} timeout must be a finite positive number."
+        ) from exc
+
+    if not math.isfinite(normalized_timeout) or normalized_timeout <= 0:
+        raise ValueError(f"{transport_name} timeout must be a finite positive number.")
+
+    return normalized_timeout
 
 
 @dataclass(slots=True)
@@ -75,7 +84,7 @@ class SplunkHECTransport(EventTransport):
 
     def __post_init__(self) -> None:
         _validate_http_endpoint(self.endpoint_url, transport_name="Splunk HEC")
-        _validate_timeout(self.timeout_s, transport_name="Splunk HEC")
+        self.timeout_s = _validate_timeout(self.timeout_s, transport_name="Splunk HEC")
 
     def send(self, event: HoneypotEvent) -> None:
         payload = json.dumps(
@@ -104,7 +113,7 @@ class ElasticBulkTransport(EventTransport):
 
     def __post_init__(self) -> None:
         _validate_http_endpoint(self.endpoint_url, transport_name="Elastic bulk")
-        _validate_timeout(self.timeout_s, transport_name="Elastic bulk")
+        self.timeout_s = _validate_timeout(self.timeout_s, transport_name="Elastic bulk")
 
     def send(self, event: HoneypotEvent) -> None:
         payload = to_elastic_bulk(event, index=self.index).encode("utf-8")
@@ -136,7 +145,7 @@ class CEFSyslogTransport(EventTransport):
     def __post_init__(self) -> None:
         _validate_syslog_endpoint(self.host, port=self.port, protocol=self.protocol)
         _validate_syslog_metadata(app_name=self.app_name, facility=self.facility)
-        _validate_timeout(self.timeout_s, transport_name="CEF/syslog")
+        self.timeout_s = _validate_timeout(self.timeout_s, transport_name="CEF/syslog")
 
     def send(self, event: HoneypotEvent) -> None:
         cef_payload = to_cef(event)
