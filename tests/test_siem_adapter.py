@@ -196,6 +196,16 @@ def test_cef_syslog_transport_rejects_whitespace_host():
         CEFSyslogTransport(host="syslog relay")
 
 
+def test_cef_syslog_transport_rejects_whitespace_app_name():
+    with pytest.raises(ValueError, match="app name must not contain whitespace"):
+        CEFSyslogTransport(host="syslog.example.com", app_name="honeypot foundry")
+
+
+def test_cef_syslog_transport_rejects_invalid_facility():
+    with pytest.raises(ValueError, match="facility must be between 0 and 23"):
+        CEFSyslogTransport(host="syslog.example.com", facility=24)
+
+
 def test_event_writer_preserves_output_when_transport_fails(capsys):
     event = _make_event()
 

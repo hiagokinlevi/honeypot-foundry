@@ -48,6 +48,17 @@ def _validate_syslog_endpoint(host: str, *, port: int, protocol: str) -> None:
         raise ValueError("CEF/syslog protocol must be tcp or udp.")
 
 
+def _validate_syslog_metadata(*, app_name: str, facility: int) -> None:
+    if not app_name or not app_name.strip():
+        raise ValueError("CEF/syslog app name must not be empty.")
+    if any(ch.isspace() for ch in app_name):
+        raise ValueError("CEF/syslog app name must not contain whitespace.")
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in app_name):
+        raise ValueError("CEF/syslog app name must not contain control characters.")
+    if not 0 <= facility <= 23:
+        raise ValueError("CEF/syslog facility must be between 0 and 23.")
+
+
 @dataclass(slots=True)
 class SplunkHECTransport(EventTransport):
     endpoint_url: str
@@ -116,6 +127,7 @@ class CEFSyslogTransport(EventTransport):
 
     def __post_init__(self) -> None:
         _validate_syslog_endpoint(self.host, port=self.port, protocol=self.protocol)
+        _validate_syslog_metadata(app_name=self.app_name, facility=self.facility)
 
     def send(self, event: HoneypotEvent) -> None:
         cef_payload = to_cef(event)
