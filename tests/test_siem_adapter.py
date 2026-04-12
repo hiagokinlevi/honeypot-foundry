@@ -367,14 +367,38 @@ def test_cef_syslog_transport_rejects_whitespace_host():
         CEFSyslogTransport(host="syslog relay")
 
 
+@pytest.mark.parametrize("host", [None, True, 514])
+def test_cef_syslog_transport_rejects_non_string_host(host):
+    with pytest.raises(ValueError, match="CEF/syslog host must be a string"):
+        CEFSyslogTransport(host=host)
+
+
+@pytest.mark.parametrize("port", [True, "6514"])
+def test_cef_syslog_transport_rejects_non_integer_port(port):
+    with pytest.raises(ValueError, match="CEF/syslog port must be an integer between 1 and 65535"):
+        CEFSyslogTransport(host="syslog.example.com", port=port)
+
+
 def test_cef_syslog_transport_rejects_whitespace_app_name():
     with pytest.raises(ValueError, match="app name must not contain whitespace"):
         CEFSyslogTransport(host="syslog.example.com", app_name="honeypot foundry")
 
 
+@pytest.mark.parametrize("app_name", [None, False, 123])
+def test_cef_syslog_transport_rejects_non_string_app_name(app_name):
+    with pytest.raises(ValueError, match="CEF/syslog app name must be a string"):
+        CEFSyslogTransport(host="syslog.example.com", app_name=app_name)
+
+
 def test_cef_syslog_transport_rejects_invalid_facility():
     with pytest.raises(ValueError, match="facility must be between 0 and 23"):
         CEFSyslogTransport(host="syslog.example.com", facility=24)
+
+
+@pytest.mark.parametrize("facility", [True, "20"])
+def test_cef_syslog_transport_rejects_non_integer_facility(facility):
+    with pytest.raises(ValueError, match="CEF/syslog facility must be an integer between 0 and 23"):
+        CEFSyslogTransport(host="syslog.example.com", facility=facility)
 
 
 @pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])

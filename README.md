@@ -114,7 +114,9 @@ HTTP SIEM endpoints also reject embedded URL credentials, query parameters, and
 fragments. Pass the Splunk HEC token with `--splunk-hec-token` and Elastic
 credentials with `--elastic-username` plus `--elastic-password` so secrets stay
 out of URLs. Routing fields and header-backed credentials are also rejected
-when they contain blank, padded, or control-character values.
+when they contain blank, padded, or control-character values. CEF/syslog
+configuration also rejects non-string hosts and app names plus non-integer
+port/facility values before any socket is opened.
 
 ## How to Contribute
 

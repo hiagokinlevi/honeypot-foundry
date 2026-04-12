@@ -53,26 +53,44 @@ def _validate_http_endpoint(endpoint_url: str, *, transport_name: str) -> None:
         raise ValueError(f"{transport_name} endpoint must not include a URL fragment.")
 
 
+def _validate_syslog_port(port: int) -> int:
+    if isinstance(port, bool) or not isinstance(port, int):
+        raise ValueError("CEF/syslog port must be an integer between 1 and 65535.")
+    if not 1 <= port <= 65535:
+        raise ValueError("CEF/syslog port must be between 1 and 65535.")
+    return port
+
+
 def _validate_syslog_endpoint(host: str, *, port: int, protocol: str) -> None:
+    if not isinstance(host, str):
+        raise ValueError("CEF/syslog host must be a string.")
     if not host or not host.strip():
         raise ValueError("CEF/syslog host must not be empty.")
     if any(ch.isspace() for ch in host):
         raise ValueError("CEF/syslog host must not contain whitespace.")
-    if not 1 <= port <= 65535:
-        raise ValueError("CEF/syslog port must be between 1 and 65535.")
+    _validate_syslog_port(port)
     if protocol not in {"udp", "tcp"}:
         raise ValueError("CEF/syslog protocol must be tcp or udp.")
 
 
+def _validate_syslog_facility(facility: int) -> int:
+    if isinstance(facility, bool) or not isinstance(facility, int):
+        raise ValueError("CEF/syslog facility must be an integer between 0 and 23.")
+    if not 0 <= facility <= 23:
+        raise ValueError("CEF/syslog facility must be between 0 and 23.")
+    return facility
+
+
 def _validate_syslog_metadata(*, app_name: str, facility: int) -> None:
+    if not isinstance(app_name, str):
+        raise ValueError("CEF/syslog app name must be a string.")
     if not app_name or not app_name.strip():
         raise ValueError("CEF/syslog app name must not be empty.")
     if any(ch.isspace() for ch in app_name):
         raise ValueError("CEF/syslog app name must not contain whitespace.")
     if any(ord(ch) < 32 or ord(ch) == 127 for ch in app_name):
         raise ValueError("CEF/syslog app name must not contain control characters.")
-    if not 0 <= facility <= 23:
-        raise ValueError("CEF/syslog facility must be between 0 and 23.")
+    _validate_syslog_facility(facility)
 
 
 def _validate_timeout(timeout_s: float, *, transport_name: str) -> float:
