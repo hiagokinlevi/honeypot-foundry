@@ -137,7 +137,7 @@ def test_splunk_transport_rejects_empty_token():
         )
 
 
-@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
+@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan"), True, False])
 def test_splunk_transport_rejects_invalid_timeout(timeout_s):
     with pytest.raises(ValueError, match="timeout must be a finite positive number"):
         SplunkHECTransport(
@@ -207,7 +207,7 @@ def test_elastic_transport_rejects_invalid_basic_auth_inputs(username, password)
         )
 
 
-@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
+@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan"), True, False])
 def test_elastic_transport_rejects_invalid_timeout(timeout_s):
     with pytest.raises(ValueError, match="timeout must be a finite positive number"):
         ElasticBulkTransport(
@@ -267,7 +267,7 @@ def test_cef_syslog_transport_rejects_invalid_facility():
         CEFSyslogTransport(host="syslog.example.com", facility=24)
 
 
-@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
+@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan"), True, False])
 def test_cef_syslog_transport_rejects_invalid_timeout(timeout_s):
     with pytest.raises(ValueError, match="timeout must be a finite positive number"):
         CEFSyslogTransport(host="syslog.example.com", timeout_s=timeout_s)

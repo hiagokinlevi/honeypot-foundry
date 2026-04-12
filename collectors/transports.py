@@ -67,6 +67,9 @@ def _validate_syslog_metadata(*, app_name: str, facility: int) -> None:
 
 
 def _validate_timeout(timeout_s: float, *, transport_name: str) -> float:
+    if isinstance(timeout_s, bool):
+        raise ValueError(f"{transport_name} timeout must be a finite positive number.")
+
     try:
         normalized_timeout = float(timeout_s)
     except (TypeError, ValueError) as exc:
