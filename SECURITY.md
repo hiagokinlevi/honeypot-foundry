@@ -6,7 +6,7 @@ This toolkit must only be deployed in environments you own or have explicit writ
 
 ## Reporting Vulnerabilities
 
-To report a vulnerability in this toolkit itself, open a GitHub security advisory. Do not disclose publicly until a fix is available.
+To report a vulnerability in this toolkit itself, email **hiagokinlevi@protonmail.com** or open a GitHub security advisory. Do not disclose publicly until a fix is available.
 
 ## Operational Safety
 

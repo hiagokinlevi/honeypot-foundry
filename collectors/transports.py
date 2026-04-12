@@ -40,6 +40,10 @@ def _validate_http_endpoint(endpoint_url: str, *, transport_name: str) -> None:
         raise ValueError(
             f"{transport_name} endpoint must not embed credentials in the URL."
         )
+    if parsed.query:
+        raise ValueError(
+            f"{transport_name} endpoint must not include URL query parameters."
+        )
     if parsed.fragment:
         raise ValueError(f"{transport_name} endpoint must not include a URL fragment.")
 

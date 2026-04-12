@@ -12,6 +12,6 @@ Unacceptable behavior: harassment, trolling, publishing private information, unp
 
 ## Enforcement
 
-Report issues to: security@hiagokinlevi.dev
+Report issues to: hiagokinlevi@protonmail.com
 
 Adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1.

@@ -1,0 +1,15 @@
+{
+  "automation_id": "cyber-detection-lane",
+  "created_at_utc": "2026-04-11T21:32:15Z",
+  "head_commit": "d501e9926e2517833e4cf074214ec98425f2e628",
+  "local_branch": "main",
+  "origin_url": "https://github.com/hiagokinlevi/honeypot-foundry.git",
+  "owner": "hiagokinlevi",
+  "publish_mode": "direct-main",
+  "publisher_root": "/Users/hiagokin/honeypot-foundry/publish-bridge",
+  "repo_name": "honeypot-foundry",
+  "repo_path": "/Users/hiagokin/honeypot-foundry",
+  "request_id": "20260411T183215-fb6a4421b52a",
+  "summary": "Cycle 63 CLI port validation",
+  "target_ref": "main"
+}

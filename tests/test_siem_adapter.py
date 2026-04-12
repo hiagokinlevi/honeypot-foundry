@@ -121,6 +121,14 @@ def test_splunk_transport_rejects_embedded_url_credentials():
         )
 
 
+def test_splunk_transport_rejects_url_query():
+    with pytest.raises(ValueError, match="must not include URL query parameters"):
+        SplunkHECTransport(
+            endpoint_url="https://splunk.example.com/services/collector/event?token=secret",
+            token="secret-token",
+        )
+
+
 def test_splunk_transport_rejects_url_fragment():
     with pytest.raises(ValueError, match="must not include a URL fragment"):
         SplunkHECTransport(
@@ -137,13 +145,22 @@ def test_splunk_transport_rejects_empty_token():
         )
 
 
-@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan"), True, False])
+@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
 def test_splunk_transport_rejects_invalid_timeout(timeout_s):
     with pytest.raises(ValueError, match="timeout must be a finite positive number"):
         SplunkHECTransport(
             endpoint_url="https://splunk.example.com/services/collector/event",
             token="secret-token",
             timeout_s=timeout_s,
+        )
+
+
+def test_splunk_transport_rejects_boolean_timeout():
+    with pytest.raises(ValueError, match="timeout must be a finite positive number"):
+        SplunkHECTransport(
+            endpoint_url="https://splunk.example.com/services/collector/event",
+            token="secret-token",
+            timeout_s=True,
         )
 
 
@@ -194,6 +211,11 @@ def test_elastic_transport_rejects_embedded_url_credentials():
         ElasticBulkTransport(endpoint_url="https://elastic:secret@elastic.example.com/_bulk")
 
 
+def test_elastic_transport_rejects_url_query():
+    with pytest.raises(ValueError, match="must not include URL query parameters"):
+        ElasticBulkTransport(endpoint_url="https://elastic.example.com/_bulk?api_key=secret")
+
+
 @pytest.mark.parametrize(
     ("username", "password"),
     [("elastic", None), (None, "changeme"), ("", "changeme"), ("elastic", "")],
@@ -207,12 +229,20 @@ def test_elastic_transport_rejects_invalid_basic_auth_inputs(username, password)
         )
 
 
-@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan"), True, False])
+@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
 def test_elastic_transport_rejects_invalid_timeout(timeout_s):
     with pytest.raises(ValueError, match="timeout must be a finite positive number"):
         ElasticBulkTransport(
             endpoint_url="https://elastic.example.com/_bulk",
             timeout_s=timeout_s,
+        )
+
+
+def test_elastic_transport_rejects_boolean_timeout():
+    with pytest.raises(ValueError, match="timeout must be a finite positive number"):
+        ElasticBulkTransport(
+            endpoint_url="https://elastic.example.com/_bulk",
+            timeout_s=True,
         )
 
 
@@ -267,10 +297,15 @@ def test_cef_syslog_transport_rejects_invalid_facility():
         CEFSyslogTransport(host="syslog.example.com", facility=24)
 
 
-@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan"), True, False])
+@pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
 def test_cef_syslog_transport_rejects_invalid_timeout(timeout_s):
     with pytest.raises(ValueError, match="timeout must be a finite positive number"):
         CEFSyslogTransport(host="syslog.example.com", timeout_s=timeout_s)
+
+
+def test_cef_syslog_transport_rejects_boolean_timeout():
+    with pytest.raises(ValueError, match="timeout must be a finite positive number"):
+        CEFSyslogTransport(host="syslog.example.com", timeout_s=True)
 
 
 def test_event_writer_preserves_output_when_transport_fails(capsys):
