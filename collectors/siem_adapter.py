@@ -36,6 +36,23 @@ def _escape_cef_extension(value: object) -> str:
     )
 
 
+def _contains_control_characters(value: str) -> bool:
+    return any(ord(ch) < 32 or ord(ch) == 127 for ch in value)
+
+
+def _validate_siem_routing_value(value: str, *, field_name: str) -> str:
+    """Reject malformed SIEM routing values before building outbound payloads."""
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} must be a string.")
+    if not value.strip():
+        raise ValueError(f"{field_name} must not be empty.")
+    if value != value.strip():
+        raise ValueError(f"{field_name} must not start or end with whitespace.")
+    if _contains_control_characters(value):
+        raise ValueError(f"{field_name} must not contain control characters.")
+    return value
+
+
 def to_splunk_hec(event: HoneypotEvent, index: str = "honeypot", source: str = "honeypot-foundry") -> dict:
     """
     Format a HoneypotEvent for Splunk HEC (HTTP Event Collector).
@@ -52,6 +69,8 @@ def to_splunk_hec(event: HoneypotEvent, index: str = "honeypot", source: str = "
         Dict conforming to Splunk HEC event format.
     """
     ts = event.timestamp.astimezone(timezone.utc).timestamp()
+    index = _validate_siem_routing_value(index, field_name="Splunk index")
+    source = _validate_siem_routing_value(source, field_name="Splunk source")
     return {
         "time": ts,
         "index": index,
@@ -78,6 +97,7 @@ def to_elastic_bulk(event: HoneypotEvent, index: str = "honeypot-events") -> str
     Returns:
         Two-line NDJSON string (includes trailing newline).
     """
+    index = _validate_siem_routing_value(index, field_name="Elastic index")
     action = json.dumps({"index": {"_index": index}})
     doc = json.dumps(event.model_dump(mode="json"))
     return f"{action}\n{doc}\n"

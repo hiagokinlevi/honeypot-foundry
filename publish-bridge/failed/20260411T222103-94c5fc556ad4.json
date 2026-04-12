@@ -1,0 +1,15 @@
+{
+  "automation_id": "cyber-detection-lane",
+  "created_at_utc": "2026-04-12T01:21:03Z",
+  "head_commit": "856622a50a59b79a991835d84b4fde747249bbaa",
+  "local_branch": "main",
+  "origin_url": "https://github.com/hiagokinlevi/honeypot-foundry.git",
+  "owner": "hiagokinlevi",
+  "publish_mode": "direct-main",
+  "publisher_root": "/Users/hiagokin/cyber-port/lane-runs/honeypot-foundry-cycle-071.y2wIGw/publish-bridge",
+  "repo_name": "honeypot-foundry-cycle-071.y2wIGw",
+  "repo_path": "/Users/hiagokin/cyber-port/lane-runs/honeypot-foundry-cycle-071.y2wIGw",
+  "request_id": "20260411T222103-94c5fc556ad4",
+  "summary": "Cycle 71 SIEM URL hardening retry",
+  "target_ref": "main"
+}

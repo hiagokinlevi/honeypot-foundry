@@ -1,0 +1,14 @@
+{
+  "error": "git push origin HEAD:main failed",
+  "finished_at_utc": "2026-04-12T01:25:13Z",
+  "head_commit": "fb8a50f45ab0ccca0040d5568e2423ad2ba6c323",
+  "remote_main": "1e0e1b885ab4536e9d1ebdb4d923316482a06f7e\trefs/heads/main",
+  "remote_main_before": "1e0e1b885ab4536e9d1ebdb4d923316482a06f7e\trefs/heads/main",
+  "repo_path": "/Users/hiagokin/cyber-port/lane-runs/honeypot-foundry-cycle-071.y2wIGw",
+  "request_id": "20260411T222500-7f646618f207",
+  "started_at_utc": "2026-04-12T01:25:12Z",
+  "status": "failed",
+  "stderr": "To https://github.com/hiagokinlevi/honeypot-foundry.git\n ! [rejected]        HEAD -> main (fetch first)\nerror: failed to push some refs to 'https://github.com/hiagokinlevi/honeypot-foundry.git'\nhint: Updates were rejected because the remote contains work that you do not\nhint: have locally. This is usually caused by another repository pushing to\nhint: the same ref. If you want to integrate the remote changes, use\nhint: 'git pull' before pushing again.\nhint: See the 'Note about fast-forwards' in 'git push --help' for details.\n",
+  "stdout": "",
+  "summary": "Cycle 71 SIEM URL hardening final"
+}

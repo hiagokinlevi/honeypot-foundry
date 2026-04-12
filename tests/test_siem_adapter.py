@@ -28,6 +28,11 @@ def test_splunk_hec_format():
     assert hec["event"]["source_ip"] == "1.2.3.4"
 
 
+def test_splunk_hec_rejects_blank_index():
+    with pytest.raises(ValueError, match="Splunk index must not be empty"):
+        to_splunk_hec(_make_event(), index="   ")
+
+
 def test_elastic_bulk_two_lines():
     event = _make_event()
     result = to_elastic_bulk(event)
@@ -37,6 +42,14 @@ def test_elastic_bulk_two_lines():
     assert "index" in action
     doc = json.loads(lines[1])
     assert doc["source_ip"] == "1.2.3.4"
+
+
+def test_elastic_bulk_rejects_padded_index():
+    with pytest.raises(
+        ValueError,
+        match="Elastic index must not start or end with whitespace",
+    ):
+        to_elastic_bulk(_make_event(), index=" honeypot-events ")
 
 
 def test_cef_format_contains_src():
@@ -145,6 +158,29 @@ def test_splunk_transport_rejects_empty_token():
         )
 
 
+def test_splunk_transport_rejects_control_chars_in_token():
+    with pytest.raises(
+        ValueError,
+        match="Splunk HEC token must not contain control characters",
+    ):
+        SplunkHECTransport(
+            endpoint_url="https://splunk.example.com/services/collector/event",
+            token="secret-token\nnext-line",
+        )
+
+
+def test_splunk_transport_rejects_control_chars_in_source():
+    with pytest.raises(
+        ValueError,
+        match="Splunk source must not contain control characters",
+    ):
+        SplunkHECTransport(
+            endpoint_url="https://splunk.example.com/services/collector/event",
+            token="secret-token",
+            source="sensor\nblue",
+        )
+
+
 @pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
 def test_splunk_transport_rejects_invalid_timeout(timeout_s):
     with pytest.raises(ValueError, match="timeout must be a finite positive number"):
@@ -216,6 +252,17 @@ def test_elastic_transport_rejects_url_query():
         ElasticBulkTransport(endpoint_url="https://elastic.example.com/_bulk?api_key=secret")
 
 
+def test_elastic_transport_rejects_control_chars_in_index():
+    with pytest.raises(
+        ValueError,
+        match="Elastic index must not contain control characters",
+    ):
+        ElasticBulkTransport(
+            endpoint_url="https://elastic.example.com/_bulk",
+            index="security\nalerts",
+        )
+
+
 @pytest.mark.parametrize(
     ("username", "password"),
     [("elastic", None), (None, "changeme"), ("", "changeme"), ("elastic", "")],
@@ -226,6 +273,27 @@ def test_elastic_transport_rejects_invalid_basic_auth_inputs(username, password)
             endpoint_url="https://elastic.example.com/_bulk",
             username=username,
             password=password,
+        )
+
+
+def test_elastic_transport_rejects_colon_in_username():
+    with pytest.raises(ValueError, match="Elastic username must not contain ':'"):
+        ElasticBulkTransport(
+            endpoint_url="https://elastic.example.com/_bulk",
+            username="elastic:admin",
+            password="changeme",
+        )
+
+
+def test_elastic_transport_rejects_control_chars_in_password():
+    with pytest.raises(
+        ValueError,
+        match="Elastic password must not contain control characters",
+    ):
+        ElasticBulkTransport(
+            endpoint_url="https://elastic.example.com/_bulk",
+            username="elastic",
+            password="change\nme",
         )
 
 

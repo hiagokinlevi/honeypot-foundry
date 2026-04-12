@@ -16,7 +16,12 @@ from datetime import UTC, datetime
 from urllib import request
 from urllib.parse import urlsplit
 
-from collectors.siem_adapter import to_cef, to_elastic_bulk, to_splunk_hec
+from collectors.siem_adapter import (
+    _validate_siem_routing_value,
+    to_cef,
+    to_elastic_bulk,
+    to_splunk_hec,
+)
 from honeypots.common.event import HoneypotEvent
 
 
@@ -87,9 +92,17 @@ def _validate_timeout(timeout_s: float, *, transport_name: str) -> float:
     return normalized_timeout
 
 
+def _contains_control_characters(value: str) -> bool:
+    return any(ord(ch) < 32 or ord(ch) == 127 for ch in value)
+
+
 def _validate_non_empty_secret(value: str, *, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} must not be empty.")
+    if value != value.strip():
+        raise ValueError(f"{field_name} must not start or end with whitespace.")
+    if _contains_control_characters(value):
+        raise ValueError(f"{field_name} must not contain control characters.")
     return value
 
 
@@ -101,10 +114,18 @@ def _validate_basic_auth(
         raise ValueError("Elastic username and password must be provided together.")
     if username is None:
         return None, None
-    if not username.strip():
+    if not isinstance(username, str) or not username.strip():
         raise ValueError("Elastic username must not be empty.")
-    if not password:
+    if username != username.strip():
+        raise ValueError("Elastic username must not start or end with whitespace.")
+    if ":" in username:
+        raise ValueError("Elastic username must not contain ':'.")
+    if _contains_control_characters(username):
+        raise ValueError("Elastic username must not contain control characters.")
+    if not isinstance(password, str) or not password:
         raise ValueError("Elastic password must not be empty.")
+    if _contains_control_characters(password):
+        raise ValueError("Elastic password must not contain control characters.")
     return username, password
 
 
@@ -122,6 +143,8 @@ class SplunkHECTransport(EventTransport):
             self.token,
             field_name="Splunk HEC token",
         )
+        self.index = _validate_siem_routing_value(self.index, field_name="Splunk index")
+        self.source = _validate_siem_routing_value(self.source, field_name="Splunk source")
         self.timeout_s = _validate_timeout(self.timeout_s, transport_name="Splunk HEC")
 
     def send(self, event: HoneypotEvent) -> None:
@@ -151,6 +174,7 @@ class ElasticBulkTransport(EventTransport):
 
     def __post_init__(self) -> None:
         _validate_http_endpoint(self.endpoint_url, transport_name="Elastic bulk")
+        self.index = _validate_siem_routing_value(self.index, field_name="Elastic index")
         self.username, self.password = _validate_basic_auth(self.username, self.password)
         self.timeout_s = _validate_timeout(self.timeout_s, transport_name="Elastic bulk")
 
