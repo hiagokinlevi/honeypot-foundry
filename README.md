@@ -110,6 +110,9 @@ operators can fix the remote connector without losing local evidence.
 CEF/syslog forwarding also escapes attacker-controlled values before delivery,
 including usernames, request paths, methods, and user agents, so crafted input
 cannot add fake CEF fields or line breaks in downstream SIEM parsers.
+HTTP SIEM endpoints also reject embedded URL credentials. Pass the Splunk HEC
+token with `--splunk-hec-token` and Elastic credentials with
+`--elastic-username` plus `--elastic-password` so secrets stay out of URLs.
 
 ## How to Contribute
 

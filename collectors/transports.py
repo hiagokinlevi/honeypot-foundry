@@ -36,6 +36,12 @@ def _validate_http_endpoint(endpoint_url: str, *, transport_name: str) -> None:
         raise ValueError(f"{transport_name} endpoint must use http or https.")
     if not parsed.netloc:
         raise ValueError(f"{transport_name} endpoint must include a hostname.")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError(
+            f"{transport_name} endpoint must not embed credentials in the URL."
+        )
+    if parsed.fragment:
+        raise ValueError(f"{transport_name} endpoint must not include a URL fragment.")
 
 
 def _validate_syslog_endpoint(host: str, *, port: int, protocol: str) -> None:
@@ -74,6 +80,27 @@ def _validate_timeout(timeout_s: float, *, transport_name: str) -> float:
     return normalized_timeout
 
 
+def _validate_non_empty_secret(value: str, *, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must not be empty.")
+    return value
+
+
+def _validate_basic_auth(
+    username: str | None,
+    password: str | None,
+) -> tuple[str | None, str | None]:
+    if (username is None) != (password is None):
+        raise ValueError("Elastic username and password must be provided together.")
+    if username is None:
+        return None, None
+    if not username.strip():
+        raise ValueError("Elastic username must not be empty.")
+    if not password:
+        raise ValueError("Elastic password must not be empty.")
+    return username, password
+
+
 @dataclass(slots=True)
 class SplunkHECTransport(EventTransport):
     endpoint_url: str
@@ -84,6 +111,10 @@ class SplunkHECTransport(EventTransport):
 
     def __post_init__(self) -> None:
         _validate_http_endpoint(self.endpoint_url, transport_name="Splunk HEC")
+        self.token = _validate_non_empty_secret(
+            self.token,
+            field_name="Splunk HEC token",
+        )
         self.timeout_s = _validate_timeout(self.timeout_s, transport_name="Splunk HEC")
 
     def send(self, event: HoneypotEvent) -> None:
@@ -113,6 +144,7 @@ class ElasticBulkTransport(EventTransport):
 
     def __post_init__(self) -> None:
         _validate_http_endpoint(self.endpoint_url, transport_name="Elastic bulk")
+        self.username, self.password = _validate_basic_auth(self.username, self.password)
         self.timeout_s = _validate_timeout(self.timeout_s, transport_name="Elastic bulk")
 
     def send(self, event: HoneypotEvent) -> None:

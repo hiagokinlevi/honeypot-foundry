@@ -113,6 +113,30 @@ def test_splunk_transport_rejects_non_http_endpoint():
         SplunkHECTransport(endpoint_url="file:///tmp/hec", token="secret-token")
 
 
+def test_splunk_transport_rejects_embedded_url_credentials():
+    with pytest.raises(ValueError, match="must not embed credentials in the URL"):
+        SplunkHECTransport(
+            endpoint_url="https://operator:secret@splunk.example.com/services/collector/event",
+            token="secret-token",
+        )
+
+
+def test_splunk_transport_rejects_url_fragment():
+    with pytest.raises(ValueError, match="must not include a URL fragment"):
+        SplunkHECTransport(
+            endpoint_url="https://splunk.example.com/services/collector/event#token",
+            token="secret-token",
+        )
+
+
+def test_splunk_transport_rejects_empty_token():
+    with pytest.raises(ValueError, match="token must not be empty"):
+        SplunkHECTransport(
+            endpoint_url="https://splunk.example.com/services/collector/event",
+            token="   ",
+        )
+
+
 @pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
 def test_splunk_transport_rejects_invalid_timeout(timeout_s):
     with pytest.raises(ValueError, match="timeout must be a finite positive number"):
@@ -163,6 +187,24 @@ def test_elastic_transport_posts_ndjson_with_basic_auth(monkeypatch):
 def test_elastic_transport_requires_hostname():
     with pytest.raises(ValueError, match="hostname"):
         ElasticBulkTransport(endpoint_url="https:///bulk")
+
+
+def test_elastic_transport_rejects_embedded_url_credentials():
+    with pytest.raises(ValueError, match="must not embed credentials in the URL"):
+        ElasticBulkTransport(endpoint_url="https://elastic:secret@elastic.example.com/_bulk")
+
+
+@pytest.mark.parametrize(
+    ("username", "password"),
+    [("elastic", None), (None, "changeme"), ("", "changeme"), ("elastic", "")],
+)
+def test_elastic_transport_rejects_invalid_basic_auth_inputs(username, password):
+    with pytest.raises(ValueError, match="Elastic (username|password)"):
+        ElasticBulkTransport(
+            endpoint_url="https://elastic.example.com/_bulk",
+            username=username,
+            password=password,
+        )
 
 
 @pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
