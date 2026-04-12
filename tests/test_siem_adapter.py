@@ -297,6 +297,18 @@ def test_elastic_transport_rejects_control_chars_in_password():
         )
 
 
+def test_elastic_transport_rejects_padded_password():
+    with pytest.raises(
+        ValueError,
+        match="Elastic password must not start or end with whitespace",
+    ):
+        ElasticBulkTransport(
+            endpoint_url="https://elastic.example.com/_bulk",
+            username="elastic",
+            password=" changeme ",
+        )
+
+
 @pytest.mark.parametrize("timeout_s", [0, -1, float("inf"), float("nan")])
 def test_elastic_transport_rejects_invalid_timeout(timeout_s):
     with pytest.raises(ValueError, match="timeout must be a finite positive number"):

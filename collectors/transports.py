@@ -124,6 +124,8 @@ def _validate_basic_auth(
         raise ValueError("Elastic username must not contain control characters.")
     if not isinstance(password, str) or not password:
         raise ValueError("Elastic password must not be empty.")
+    if password != password.strip():
+        raise ValueError("Elastic password must not start or end with whitespace.")
     if _contains_control_characters(password):
         raise ValueError("Elastic password must not contain control characters.")
     return username, password
