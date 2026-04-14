@@ -23,3 +23,6 @@
 - [x] Splunk HEC HTTP transport (configurable endpoint + token)
 - [x] Elastic HTTP bulk transport
 - [x] Microsoft Sentinel CEF via syslog-ng
+
+## Automated Completions
+- [x] Centralized Log Forwarder (cycle 4)
