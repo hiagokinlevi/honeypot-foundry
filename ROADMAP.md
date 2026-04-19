@@ -26,3 +26,4 @@
 
 ## Automated Completions
 - [x] Centralized Log Forwarder (cycle 4)
+- [x] Attack Session Recording (cycle 20)
