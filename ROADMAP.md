@@ -30,3 +30,4 @@
 - [x] Kubernetes Honeypot Deployment (cycle 21)
 - [x] Alerting Rules for SIEM (cycle 22)
 - [x] Automated IP Blocking Integration (cycle 23)
+- [x] Attack Data Export API (cycle 24)
