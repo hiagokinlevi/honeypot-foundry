@@ -28,3 +28,4 @@
 - [x] Centralized Log Forwarder (cycle 4)
 - [x] Attack Session Recording (cycle 20)
 - [x] Kubernetes Honeypot Deployment (cycle 21)
+- [x] Alerting Rules for SIEM (cycle 22)
