@@ -33,3 +33,4 @@
 - [x] Attack Data Export API (cycle 24)
 - [x] Honeypot Healthcheck Endpoint (cycle 25)
 - [x] Attack Event Replay CLI for SIEM Testing (cycle 26)
+- [x] CLI JSONL Event Schema Validator (cycle 27)
