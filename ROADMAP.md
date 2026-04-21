@@ -31,3 +31,4 @@
 - [x] Alerting Rules for SIEM (cycle 22)
 - [x] Automated IP Blocking Integration (cycle 23)
 - [x] Attack Data Export API (cycle 24)
+- [x] Honeypot Healthcheck Endpoint (cycle 25)
