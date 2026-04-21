@@ -32,3 +32,4 @@
 - [x] Automated IP Blocking Integration (cycle 23)
 - [x] Attack Data Export API (cycle 24)
 - [x] Honeypot Healthcheck Endpoint (cycle 25)
+- [x] Attack Event Replay CLI for SIEM Testing (cycle 26)
