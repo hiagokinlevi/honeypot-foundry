@@ -36,3 +36,4 @@
 - [x] CLI JSONL Event Schema Validator (cycle 27)
 - [x] Add configurable JSONL file rotation by size (cycle 28)
 - [x] Emit per-source IP rate-limit telemetry events (cycle 29)
+- [x] Add deterministic event_id to all emitted events (cycle 30)
