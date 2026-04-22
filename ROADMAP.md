@@ -35,3 +35,4 @@
 - [x] Attack Event Replay CLI for SIEM Testing (cycle 26)
 - [x] CLI JSONL Event Schema Validator (cycle 27)
 - [x] Add configurable JSONL file rotation by size (cycle 28)
+- [x] Emit per-source IP rate-limit telemetry events (cycle 29)
