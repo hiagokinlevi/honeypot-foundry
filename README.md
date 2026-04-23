@@ -52,6 +52,11 @@ honeypot run-ftp --port 2121 --banner "Microsoft FTP Service" --output-file even
 # Start RDP banner observer on port 3389
 honeypot run-rdp --port 3389 --output-file events.jsonl
 
+# Tag all emitted events with a stable instance_id
+honeypot --instance-id hp-node-a run-http --port 8080 --output-file events.jsonl
+# or via environment variable fallback
+HONEYPOT_INSTANCE_ID=hp-node-a honeypot run-http --port 8080 --output-file events.jsonl
+
 # Print Helm chart path and deployment guidance
 honeypot show-helm
 
@@ -65,67 +70,3 @@ honeypot run-http \
   --cef-syslog-port 6514 \
   --cef-syslog-protocol tcp
 ```
-
-Each `run-*` command can now forward live events to one or more SIEM endpoints
-while still writing local JSONL telemetry:
-
-- `--splunk-hec-url` + `--splunk-hec-token` posts Splunk HEC events with configurable index/source fields
-- `--elastic-url` posts NDJSON batches to the Elastic/OpenSearch bulk API, optionally with basic auth
-- `--cef-syslog-host` sends CEF-over-syslog payloads to a syslog-ng or Sentinel relay over UDP or TCP
-
-The installed `honeypot` console script now resolves through a repository-unique
-wrapper so editable installs do not collide with other k1N repositories that
-also expose Click CLIs.
-
-## Kubernetes Deployment
-
-The repository ships a Helm chart for deploying isolated decoy services into a
-cluster. By default it exposes SSH, HTTP, and API decoys, keeps FTP/RDP
-disabled until explicitly enabled, creates optional HPA/PDB resources, and
-applies a default-deny egress `NetworkPolicy` so a compromised pod cannot phone
-home.
-
-```bash
-helm upgrade --install honeypot-foundry \
-  ./helm/honeypot-foundry \
-  --namespace honeypot-foundry --create-namespace
-
-# Optional protocol toggles
-helm upgrade --install honeypot-foundry \
-  ./helm/honeypot-foundry \
-  --namespace honeypot-foundry --create-namespace \
-  --set services.ftp.enabled=true \
-  --set services.rdp.enabled=true
-```
-
-## Ethical Disclaimer
-
-Deploy only in environments you own or are explicitly authorized to monitor. This toolkit is for observation and telemetry collection only. It does not execute attacker commands, expose real services, or enable any form of offensive activity. Review applicable laws and organizational policies before deployment.
-
-## SIEM Forwarding Notes
-
-Live transport failures do not discard the local event stream. The honeypot
-continues writing to stdout and `--output-file`, and emits a stderr warning so
-operators can fix the remote connector without losing local evidence.
-CEF/syslog forwarding also escapes attacker-controlled values before delivery,
-including usernames, request paths, methods, and user agents, so crafted input
-cannot add fake CEF fields or line breaks in downstream SIEM parsers.
-HTTP SIEM endpoints also reject embedded URL credentials, query parameters, and
-fragments. Pass the Splunk HEC token with `--splunk-hec-token` and Elastic
-credentials with `--elastic-username` plus `--elastic-password` so secrets stay
-out of URLs. Routing fields and header-backed credentials are also rejected
-when they contain blank, padded, or control-character values. CEF/syslog
-configuration also rejects non-string hosts and app names plus non-integer
-port/facility values before any socket is opened.
-
-## How to Contribute
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md).
-
-## License
-
-CC BY 4.0 — see [LICENSE](LICENSE).
