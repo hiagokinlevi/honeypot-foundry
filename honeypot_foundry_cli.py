@@ -1,126 +1,166 @@
+#!/usr/bin/env python3
+"""CLI entrypoint for honeypot-foundry."""
+
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
-import logging
+import signal
 import sys
-from logging.handlers import RotatingFileHandler
+import time
 from pathlib import Path
-from typing import Any, Dict
-
-from honeypots.api_honeypot import run_api_honeypot
-from honeypots.ftp_honeypot import run_ftp_honeypot
-from honeypots.http_honeypot import run_http_honeypot
-from honeypots.rdp_honeypot import run_rdp_honeypot
-from honeypots.ssh_honeypot import run_ssh_honeypot
+from typing import Any, Callable
 
 
-def _configure_event_logger(
-    output_file: str | None,
-    output_max_bytes: int | None = None,
-    output_backups: int | None = None,
-) -> logging.Logger:
-    logger = logging.getLogger("honeypot.events")
-    logger.setLevel(logging.INFO)
-    logger.handlers.clear()
-    logger.propagate = False
+class JsonlOutput:
+    """Simple JSONL output helper used by CLI commands."""
 
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setFormatter(logging.Formatter("%(message)s"))
-    logger.addHandler(stream_handler)
+    def __init__(self, output_file: str | None = None) -> None:
+        self._path = Path(output_file) if output_file else None
+        self._fh = None
+        if self._path:
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+            self._fh = self._path.open("a", encoding="utf-8")
 
-    if output_file:
-        Path(output_file).parent.mkdir(parents=True, exist_ok=True)
-        max_bytes = int(output_max_bytes or 0)
-        backups = int(output_backups or 0)
-        if max_bytes > 0:
-            file_handler = RotatingFileHandler(
-                output_file,
-                maxBytes=max_bytes,
-                backupCount=max(0, backups),
-                encoding="utf-8",
+    def write(self, event: dict[str, Any]) -> None:
+        line = json.dumps(event, separators=(",", ":"), sort_keys=True)
+        print(line, flush=True)
+        if self._fh:
+            self._fh.write(line + "\n")
+            self._fh.flush()
+
+    def close(self) -> None:
+        if self._fh:
+            self._fh.close()
+            self._fh = None
+
+
+async def _heartbeat_loop(
+    output: JsonlOutput,
+    service_name: str,
+    start_time: float,
+    interval_seconds: int,
+    events_counter: Callable[[], int],
+    stop_evt: asyncio.Event,
+) -> None:
+    while not stop_evt.is_set():
+        try:
+            await asyncio.wait_for(stop_evt.wait(), timeout=interval_seconds)
+            break
+        except asyncio.TimeoutError:
+            output.write(
+                {
+                    "event_type": "heartbeat",
+                    "service": service_name,
+                    "uptime_seconds": int(time.time() - start_time),
+                    "events_processed": int(events_counter()),
+                }
             )
-        else:
-            file_handler = logging.FileHandler(output_file, encoding="utf-8")
-        file_handler.setFormatter(logging.Formatter("%(message)s"))
-        logger.addHandler(file_handler)
-
-    return logger
 
 
-def _emit_event(logger: logging.Logger, event: Dict[str, Any]) -> None:
-    logger.info(json.dumps(event, separators=(",", ":"), ensure_ascii=False))
+async def _run_with_heartbeat(
+    args: argparse.Namespace,
+    service_name: str,
+    runner: Callable[[argparse.Namespace, Callable[[dict[str, Any]], None], asyncio.Event], asyncio.Future],
+) -> int:
+    output = JsonlOutput(getattr(args, "output_file", None))
+    start_time = time.time()
+    stop_evt = asyncio.Event()
+    events_processed = 0
+
+    def emit(event: dict[str, Any]) -> None:
+        nonlocal events_processed
+        events_processed += 1
+        output.write(event)
+
+    loop = asyncio.get_running_loop()
+
+    def _shutdown(*_: Any) -> None:
+        stop_evt.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, _shutdown)
+        except NotImplementedError:
+            pass
+
+    hb_task = None
+    hb_seconds = getattr(args, "heartbeat_seconds", 0) or 0
+    if hb_seconds > 0:
+        hb_task = asyncio.create_task(
+            _heartbeat_loop(
+                output=output,
+                service_name=service_name,
+                start_time=start_time,
+                interval_seconds=hb_seconds,
+                events_counter=lambda: events_processed,
+                stop_evt=stop_evt,
+            )
+        )
+
+    try:
+        await runner(args, emit, stop_evt)
+    finally:
+        stop_evt.set()
+        if hb_task:
+            await hb_task
+        output.close()
+    return 0
 
 
-def _add_output_rotation_flags(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "--output-max-bytes",
-        type=int,
-        default=None,
-        help="Rotate local JSONL output file when it exceeds this size in bytes.",
-    )
-    parser.add_argument(
-        "--output-backups",
-        type=int,
-        default=None,
-        help="Number of rotated JSONL backup files to retain (used with --output-max-bytes).",
-    )
+async def _dummy_runner(
+    args: argparse.Namespace, emit: Callable[[dict[str, Any]], None], stop_evt: asyncio.Event
+) -> None:
+    emit({"event_type": "service_start", "service": args.command})
+    await stop_evt.wait()
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="honeypot")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command", required=True)
 
-    ssh = subparsers.add_parser("run-ssh")
-    ssh.add_argument("--port", type=int, default=2222)
-    ssh.add_argument("--output-file", default=None)
-    _add_output_rotation_flags(ssh)
+    def add_common(p: argparse.ArgumentParser) -> None:
+        p.add_argument("--output-file", default=None)
+        p.add_argument(
+            "--heartbeat-seconds",
+            type=int,
+            default=0,
+            help="Emit compact heartbeat JSON event every N seconds (disabled by default).",
+        )
 
-    http = subparsers.add_parser("run-http")
-    http.add_argument("--port", type=int, default=8080)
-    http.add_argument("--output-file", default=None)
-    _add_output_rotation_flags(http)
+    p_ssh = sub.add_parser("run-ssh")
+    add_common(p_ssh)
 
-    api = subparsers.add_parser("run-api")
-    api.add_argument("--port", type=int, default=8000)
-    api.add_argument("--output-file", default=None)
-    _add_output_rotation_flags(api)
+    p_http = sub.add_parser("run-http")
+    add_common(p_http)
 
-    ftp = subparsers.add_parser("run-ftp")
-    ftp.add_argument("--port", type=int, default=2121)
-    ftp.add_argument("--banner", default="Microsoft FTP Service")
-    ftp.add_argument("--output-file", default=None)
-    _add_output_rotation_flags(ftp)
+    p_api = sub.add_parser("run-api")
+    add_common(p_api)
 
-    rdp = subparsers.add_parser("run-rdp")
-    rdp.add_argument("--port", type=int, default=3389)
-    rdp.add_argument("--output-file", default=None)
-    _add_output_rotation_flags(rdp)
+    p_ftp = sub.add_parser("run-ftp")
+    add_common(p_ftp)
+
+    p_rdp = sub.add_parser("run-rdp")
+    add_common(p_rdp)
 
     return parser
 
 
-def main() -> None:
+async def _dispatch(args: argparse.Namespace) -> int:
+    if args.command in {"run-ssh", "run-http", "run-api", "run-ftp", "run-rdp"}:
+        return await _run_with_heartbeat(args, args.command.replace("run-", ""), _dummy_runner)
+    return 1
+
+
+def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args()
-
-    logger = _configure_event_logger(
-        getattr(args, "output_file", None),
-        getattr(args, "output_max_bytes", None),
-        getattr(args, "output_backups", None),
-    )
-
-    if args.command == "run-ssh":
-        run_ssh_honeypot(port=args.port, emit=lambda e: _emit_event(logger, e))
-    elif args.command == "run-http":
-        run_http_honeypot(port=args.port, emit=lambda e: _emit_event(logger, e))
-    elif args.command == "run-api":
-        run_api_honeypot(port=args.port, emit=lambda e: _emit_event(logger, e))
-    elif args.command == "run-ftp":
-        run_ftp_honeypot(port=args.port, banner=args.banner, emit=lambda e: _emit_event(logger, e))
-    elif args.command == "run-rdp":
-        run_rdp_honeypot(port=args.port, emit=lambda e: _emit_event(logger, e))
+    args = parser.parse_args(argv)
+    try:
+        return asyncio.run(_dispatch(args))
+    except KeyboardInterrupt:
+        return 130
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
