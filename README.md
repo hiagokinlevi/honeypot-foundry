@@ -52,6 +52,9 @@ honeypot run-ftp --port 2121 --banner "Microsoft FTP Service" --output-file even
 # Start RDP banner observer on port 3389
 honeypot run-rdp --port 3389 --output-file events.jsonl
 
+# Bind listeners to localhost only (secure segmented deployment example)
+honeypot --bind-host 127.0.0.1 run-http --port 8080 --output-file events.jsonl
+
 # Tag all emitted events with a stable instance_id
 honeypot --instance-id hp-node-a run-http --port 8080 --output-file events.jsonl
 # or via environment variable fallback
@@ -61,12 +64,5 @@ HONEYPOT_INSTANCE_ID=hp-node-a honeypot run-http --port 8080 --output-file event
 honeypot show-helm
 
 # Forward live events to Splunk and Microsoft Sentinel-compatible syslog
-honeypot run-http \
-  --port 8080 \
-  --output-file events.jsonl \
-  --splunk-hec-url https://splunk.example.com:8088/services/collector/event \
-  --splunk-hec-token YOUR_HEC_TOKEN \
-  --cef-syslog-host syslog-ng.internal \
-  --cef-syslog-port 6514 \
-  --cef-syslog-protocol tcp
+honeypot run-http 
 ```
