@@ -39,3 +39,4 @@
 - [x] Add deterministic event_id to all emitted events (cycle 30)
 - [x] Introduce stdout heartbeat metric line for liveness monitoring (cycle 31)
 - [x] Support static honeypot instance_id tagging (cycle 32)
+- [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
