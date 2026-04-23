@@ -38,3 +38,4 @@
 - [x] Emit per-source IP rate-limit telemetry events (cycle 29)
 - [x] Add deterministic event_id to all emitted events (cycle 30)
 - [x] Introduce stdout heartbeat metric line for liveness monitoring (cycle 31)
+- [x] Support static honeypot instance_id tagging (cycle 32)
