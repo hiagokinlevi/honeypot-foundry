@@ -40,3 +40,4 @@
 - [x] Introduce stdout heartbeat metric line for liveness monitoring (cycle 31)
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
+- [x] Add `--output-buffer-size` CLI option for batched JSONL writes (cycle 34)
