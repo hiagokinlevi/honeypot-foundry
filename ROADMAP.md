@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add `--event-source` CLI tag for all emitted telemetry (cycle 39)
+- [x] Add `--gzip-output` option for compressed JSONL event files (cycle 40)
