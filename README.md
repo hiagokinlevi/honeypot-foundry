@@ -60,9 +60,6 @@ honeypot --instance-id hp-node-a run-http --port 8080 --output-file events.jsonl
 # or via environment variable fallback
 HONEYPOT_INSTANCE_ID=hp-node-a honeypot run-http --port 8080 --output-file events.jsonl
 
-# Print Helm chart path and deployment guidance
-honeypot show-helm
-
-# Forward live events to Splunk and Microsoft Sentinel-compatible syslog
-honeypot run-http 
+# High-volume deployment: gzip-compressed JSONL output
+honeypot run-http --port 8080 --output-file /var/log/honeypot/events.jsonl.gz --gzip-output
 ```
