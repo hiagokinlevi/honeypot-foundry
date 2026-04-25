@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add bounded SIEM forwarder retry queue with drop telemetry (cycle 37)
+- [x] Add `--max-request-body-bytes` cap for HTTP/API capture (cycle 38)
