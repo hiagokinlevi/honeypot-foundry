@@ -60,8 +60,6 @@ honeypot --instance-id hp-node-a run-http --port 8080 --output-file events.jsonl
 # or via environment variable fallback
 HONEYPOT_INSTANCE_ID=hp-node-a honeypot run-http --port 8080 --output-file events.jsonl
 
-# Override telemetry schema_version stamp for controlled migrations
-honeypot --event-schema-version 1.1 run-http --port 8080 --output-file events.jsonl
-
-# High
+# Validate config only (CI/CD or Helm startup preflight)
+honeypot --dry-run-config run-http --port 8080 --output-file /var/log/honeypot/events.jsonl
 ```
