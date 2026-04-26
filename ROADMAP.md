@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add `--event-schema-version` CLI override for emitted telemetry (cycle 41)
+- [x] Add `--dry-run-config` CLI preflight validation mode (cycle 42)
