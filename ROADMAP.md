@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add --siem-forward-timeout-seconds CLI option (cycle 43)
+- [x] Add `--heartbeat-interval-seconds` CLI option for liveness metric cadence (cycle 44)
