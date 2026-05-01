@@ -60,6 +60,6 @@ honeypot --instance-id hp-node-a run-http --port 8080 --output-file events.jsonl
 # or via environment variable fallback
 HONEYPOT_INSTANCE_ID=hp-node-a honeypot run-http --port 8080 --output-file events.jsonl
 
-# Validate config only (CI/CD or Helm startup preflight)
-honeypot --dry-run-config run-http --port 8080 --output-file /var/log/honeypot/events.jsonl
+# Bound rotated JSONL backup retention (defaults to 5)
+honeypot run-http --port 8080 --output-file events.jsonl --output-file-max-bytes 10485760 --output-file-max-backups 5
 ```
