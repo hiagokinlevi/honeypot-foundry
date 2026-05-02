@@ -60,6 +60,9 @@ honeypot --instance-id hp-node-a run-http --port 8080 --output-file events.jsonl
 # or via environment variable fallback
 HONEYPOT_INSTANCE_ID=hp-node-a honeypot run-http --port 8080 --output-file events.jsonl
 
-# Bound rotated JSONL backup retention (defaults to 5)
-honeypot run-http --port 8080 --output-file events.jsonl --output-file-max-bytes 10485760 --output-file-max-backups 5
+# Validate one event object against the schema (from file)
+honeypot validate-event --event-file event.json --format text
+
+# Validate one event object from stdin with machine-friendly JSON output
+cat event.json | honeypot validate-event --format json
 ```
