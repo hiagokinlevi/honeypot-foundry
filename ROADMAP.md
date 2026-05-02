@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add `--output-file-max-backups` CLI flag for bounded JSONL rotation retention (cycle 45)
+- [x] Add `honeypot validate-event` CLI command for single-event schema checks (cycle 46)
