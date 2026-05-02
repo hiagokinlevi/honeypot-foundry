@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add --output-line-buffered CLI flag for immediate JSONL flush (cycle 47)
+- [x] Add --output-file-create-dirs flag for automatic parent directory creation (cycle 48)
