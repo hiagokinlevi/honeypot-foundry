@@ -23,6 +23,7 @@
 - [x] Splunk HEC HTTP transport (configurable endpoint + token)
 - [x] Elastic HTTP bulk transport
 - [x] Microsoft Sentinel CEF via syslog-ng
+- [x] Configurable bounded SIEM forward retries via `--siem-forward-retries` with final delivery status telemetry
 
 ## Automated Completions
 - [x] Centralized Log Forwarder (cycle 4)
@@ -41,4 +42,3 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add `--jsonl-fsync-interval` CLI option for durable event writes (cycle 50)
