@@ -55,4 +55,8 @@ honeypot run-rdp --port 3389 --output-file events.jsonl
 # Force flush after each JSONL line (stdout and file sinks)
 # Tradeoff: higher I/O overhead for safer durability during abrupt restarts
 honeypot run-http --port 8080 --output-file events.jsonl --output-line-buffered
+
+# Periodically fsync JSONL file for stronger crash/node-failure durability
+# Recommended in high-assurance logging environments (extra disk I/O overhead)
+honeypot run-http --port 8080 --output-file events.jsonl --jsonl-fsync-interval 2
 ```
