@@ -3,30 +3,22 @@ import asyncio
 import hashlib
 import json
 import os
+import signal
 import socket
 import sys
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-DEFAULT_OUTPUT_FILE_PERMISSIONS = "600"
-
-
-def _utc_now_iso() -> str:
+def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _parse_output_file_permissions(value: str) -> int:
-    v = value.strip()
-    if len(v) not in (3, 4):
-        raise argparse.ArgumentTypeError("must be octal like 600 or 0640")
-    if any(ch not in "01234567" for ch in v):
-        raise argparse.ArgumentTypeError("must contain only octal digits 0-7")
-    mode = int(v, 8)
-    if mode > 0o7777:
-        raise argparse.ArgumentTypeError("octal mode out of range")
-    return mode
+def deterministic_event_id(event: Dict[str, Any]) -> str:
+    payload = json.dumps(event, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
 
 
 class JsonlWriter:
@@ -34,124 +26,134 @@ class JsonlWriter:
         self,
         output_file: Optional[str] = None,
         line_buffered: bool = False,
-        rotate_max_bytes: int = 0,
-        output_file_permissions: int = 0o600,
+        fsync_interval: Optional[float] = None,
     ) -> None:
         self.output_file = output_file
         self.line_buffered = line_buffered
-        self.rotate_max_bytes = rotate_max_bytes
-        self.output_file_permissions = output_file_permissions
+        self.fsync_interval = fsync_interval if fsync_interval and fsync_interval > 0 else None
+        self._last_fsync = time.monotonic()
         self._fh = None
-        if self.output_file:
-            self._open_file(append=True)
+        if output_file:
+            Path(output_file).parent.mkdir(parents=True, exist_ok=True)
+            self._fh = open(output_file, "a", encoding="utf-8", buffering=1 if line_buffered else -1)
 
-    def _emit_permissions_warning_event(self, path: str, error: Exception) -> None:
-        evt = {
-            "event_type": "output_file_permissions_warning",
-            "timestamp": _utc_now_iso(),
-            "path": path,
-            "requested_mode": oct(self.output_file_permissions),
-            "error": str(error),
-        }
-        sys.stderr.write(json.dumps(evt) + "\n")
-        sys.stderr.flush()
+    def write_event(self, event: Dict[str, Any]) -> None:
+        if "event_id" not in event:
+            event["event_id"] = deterministic_event_id(event)
+        line = json.dumps(event, separators=(",", ":"), ensure_ascii=False)
 
-    def _apply_permissions(self, path: str) -> None:
-        try:
-            os.chmod(path, self.output_file_permissions)
-        except Exception as exc:  # pragma: no cover
-            self._emit_permissions_warning_event(path, exc)
-
-    def _open_file(self, append: bool = True) -> None:
-        mode = "a" if append else "w"
-        existed = os.path.exists(self.output_file)
-        self._fh = open(self.output_file, mode, buffering=1 if self.line_buffered else -1, encoding="utf-8")
-        if not existed:
-            self._apply_permissions(self.output_file)
-
-    def _should_rotate(self, line_len: int) -> bool:
-        if not self._fh or not self.rotate_max_bytes or self.rotate_max_bytes <= 0:
-            return False
-        try:
-            current = self._fh.tell()
-        except Exception:
-            return False
-        return (current + line_len) > self.rotate_max_bytes
-
-    def _rotate(self) -> None:
-        if not self._fh or not self.output_file:
-            return
-        self._fh.close()
-        rotated = f"{self.output_file}.{int(time.time())}"
-        os.replace(self.output_file, rotated)
-        self._open_file(append=False)
-
-    def write(self, event: Dict[str, Any]) -> None:
-        line = json.dumps(event, separators=(",", ":")) + "\n"
-        sys.stdout.write(line)
+        sys.stdout.write(line + "\n")
         if self.line_buffered:
             sys.stdout.flush()
+
         if self._fh:
-            if self._should_rotate(len(line.encode("utf-8"))):
-                self._rotate()
-            self._fh.write(line)
+            self._fh.write(line + "\n")
             if self.line_buffered:
                 self._fh.flush()
+            if self.fsync_interval is not None:
+                now = time.monotonic()
+                if (now - self._last_fsync) >= self.fsync_interval:
+                    self._fh.flush()
+                    os.fsync(self._fh.fileno())
+                    self._last_fsync = now
+
+    def close(self) -> None:
+        if self._fh:
+            self._fh.flush()
+            if self.fsync_interval is not None:
+                os.fsync(self._fh.fileno())
+            self._fh.close()
+            self._fh = None
 
 
-def _build_parser() -> argparse.ArgumentParser:
+async def run_dummy_service(args: argparse.Namespace, service: str) -> None:
+    writer = JsonlWriter(
+        output_file=args.output_file,
+        line_buffered=getattr(args, "output_line_buffered", False),
+        fsync_interval=getattr(args, "jsonl_fsync_interval", None),
+    )
+    stop = asyncio.Event()
+
+    def _stop(*_: Any) -> None:
+        stop.set()
+
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, _stop)
+        except NotImplementedError:
+            pass
+
+    writer.write_event(
+        {
+            "timestamp": utc_now_iso(),
+            "service": service,
+            "event_type": "service_start",
+            "bind_host": args.bind_host,
+            "port": args.port,
+        }
+    )
+
+    while not stop.is_set():
+        await asyncio.sleep(1)
+
+    writer.write_event(
+        {
+            "timestamp": utc_now_iso(),
+            "service": service,
+            "event_type": "service_stop",
+        }
+    )
+    writer.close()
+
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="honeypot")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    def add_run(name: str) -> None:
-        p = sub.add_parser(name)
-        p.add_argument("--port", type=int, required=True)
-        p.add_argument("--bind-host", default="0.0.0.0")
-        p.add_argument("--output-file")
-        p.add_argument("--output-line-buffered", action="store_true")
-        p.add_argument("--output-rotate-max-bytes", type=int, default=0)
+    def add_common(p: argparse.ArgumentParser) -> None:
+        p.add_argument("--bind-host", default="0.0.0.0", help="Host/interface to bind")
+        p.add_argument("--port", type=int, required=True, help="Port to listen on")
+        p.add_argument("--output-file", default=None, help="Write JSONL events to file")
         p.add_argument(
-            "--output-file-permissions",
-            type=_parse_output_file_permissions,
-            default=_parse_output_file_permissions(DEFAULT_OUTPUT_FILE_PERMISSIONS),
-            help="Octal file mode for created/rotated JSONL files (default: 600)",
+            "--output-line-buffered",
+            action="store_true",
+            help="Flush each JSONL line immediately (stdout and file)",
+        )
+        p.add_argument(
+            "--jsonl-fsync-interval",
+            type=float,
+            default=None,
+            help=(
+                "Periodically fsync JSONL output file every N seconds for durability; "
+                "disabled by default"
+            ),
         )
 
     for cmd in ("run-ssh", "run-http", "run-api", "run-ftp", "run-rdp"):
-        add_run(cmd)
+        c = sub.add_parser(cmd)
+        add_common(c)
 
     return parser
 
 
-async def _run(args: argparse.Namespace) -> None:
-    writer = JsonlWriter(
-        output_file=args.output_file,
-        line_buffered=args.output_line_buffered,
-        rotate_max_bytes=args.output_rotate_max_bytes,
-        output_file_permissions=args.output_file_permissions,
-    )
-    writer.write(
-        {
-            "event_type": "startup",
-            "timestamp": _utc_now_iso(),
-            "service": args.command,
-            "bind_host": args.bind_host,
-            "port": args.port,
-            "instance_id": hashlib.sha256(f"{socket.gethostname()}:{args.port}".encode()).hexdigest()[:12],
-        }
-    )
-    while True:
-        await asyncio.sleep(3600)
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
 
-
-def main(argv: Optional[list] = None) -> int:
-    parser = _build_parser()
-    args = parser.parse_args(argv)
-    if args.command.startswith("run-"):
-        asyncio.run(_run(args))
-        return 0
-    parser.error("unknown command")
-    return 2
+    if args.command == "run-ssh":
+        asyncio.run(run_dummy_service(args, "ssh"))
+    elif args.command == "run-http":
+        asyncio.run(run_dummy_service(args, "http"))
+    elif args.command == "run-api":
+        asyncio.run(run_dummy_service(args, "api"))
+    elif args.command == "run-ftp":
+        asyncio.run(run_dummy_service(args, "ftp"))
+    elif args.command == "run-rdp":
+        asyncio.run(run_dummy_service(args, "rdp"))
+    else:
+        parser.error("Unknown command")
+    return 0
 
 
 if __name__ == "__main__":
