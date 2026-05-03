@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add `--siem-forward-retries` CLI option with bounded retry loop (cycle 51)
+- [x] Add `--siem-forward-batch-size` CLI option for outbound event batching (cycle 52)
