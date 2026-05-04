@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add `--max-events` CLI option for bounded honeypot run sessions (cycle 53)
+- [x] Add `--event-timestamp-format` CLI flag (unix|rfc3339) (cycle 54)
