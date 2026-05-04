@@ -1,159 +1,71 @@
+#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
-import asyncio
-import contextlib
-import signal
+import json
 import sys
-from typing import Any, Awaitable, Callable, Optional
+from datetime import datetime, timezone
+from typing import Any, Dict
+
 
 # NOTE:
-# This file intentionally keeps imports local in command handlers where possible
-# to avoid side effects for unrelated commands.
+# This file is intentionally self-contained for CLI wiring and shared
+# event serialization behavior.
 
 
-class _MaxEventsController:
-    """Shared emitted-event counter with graceful shutdown trigger.
-
-    This is process-wide for a single CLI invocation and is intended to be
-    incremented in the common event write/forward path.
-    """
-
-    def __init__(self, max_events: Optional[int]) -> None:
-        self.max_events = max_events if (max_events is not None and max_events > 0) else None
-        self._count = 0
-        self._shutdown_requested = False
-        self._shutdown_event: asyncio.Event = asyncio.Event()
-
-    @property
-    def shutdown_requested(self) -> bool:
-        return self._shutdown_requested
-
-    @property
-    def emitted_count(self) -> int:
-        return self._count
-
-    def on_event_emitted(self) -> None:
-        if self.max_events is None or self._shutdown_requested:
-            return
-        self._count += 1
-        if self._count >= self.max_events:
-            self._shutdown_requested = True
-            self._shutdown_event.set()
-
-    async def wait_for_shutdown(self) -> None:
-        await self._shutdown_event.wait()
+def _format_event_timestamp(ts: float, fmt: str) -> Any:
+    if fmt == "unix":
+        return ts
+    if fmt == "rfc3339":
+        return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    raise ValueError(f"unsupported event timestamp format: {fmt}")
 
 
-async def _run_with_max_events(
-    runner: Callable[[argparse.Namespace], Awaitable[None]],
-    args: argparse.Namespace,
-) -> int:
-    controller = _MaxEventsController(args.max_events)
-
-    # Expose controller for downstream shared event path integration.
-    # Existing components can read args._max_events_controller and call
-    # on_event_emitted() from the common writer/forwarder path.
-    setattr(args, "_max_events_controller", controller)
-
-    stop_event = asyncio.Event()
-
-    def _handle_signal(*_: Any) -> None:
-        stop_event.set()
-
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        with contextlib.suppress(NotImplementedError):
-            loop.add_signal_handler(sig, _handle_signal)
-
-    runner_task = asyncio.create_task(runner(args))
-    max_task = asyncio.create_task(controller.wait_for_shutdown()) if controller.max_events else None
-    stop_task = asyncio.create_task(stop_event.wait())
-
-    wait_set = {runner_task, stop_task}
-    if max_task:
-        wait_set.add(max_task)
-
-    done, pending = await asyncio.wait(wait_set, return_when=asyncio.FIRST_COMPLETED)
-
-    # If max-events threshold reached first, gracefully cancel runner.
-    if max_task and max_task in done and not runner_task.done():
-        runner_task.cancel()
-
-    if stop_task in done and not runner_task.done():
-        runner_task.cancel()
-
-    for t in pending:
-        t.cancel()
-
-    with contextlib.suppress(asyncio.CancelledError):
-        await asyncio.gather(*pending, return_exceptions=True)
-
-    try:
-        await runner_task
-    except asyncio.CancelledError:
-        # Expected for bounded runs and signal-based stops.
-        pass
-
-    return 0
+def serialize_event(event: Dict[str, Any], timestamp_format: str = "unix") -> str:
+    e = dict(event)
+    if "timestamp" in e:
+        try:
+            numeric_ts = float(e["timestamp"])
+        except (TypeError, ValueError):
+            # Preserve existing value if upstream already provided non-numeric timestamp.
+            pass
+        else:
+            e["timestamp"] = _format_event_timestamp(numeric_ts, timestamp_format)
+    return json.dumps(e, separators=(",", ":"), sort_keys=True)
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="honeypot")
-    sub = parser.add_subparsers(dest="command", required=True)
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="honeypot", description="honeypot-foundry CLI")
+    parser.add_argument(
+        "--event-timestamp-format",
+        choices=("unix", "rfc3339"),
+        default="unix",
+        help="Event timestamp output format: unix (default) or rfc3339 (UTC ISO-8601)",
+    )
 
-    def _add_run_common(p: argparse.ArgumentParser) -> None:
-        p.add_argument("--bind-host", default="0.0.0.0")
-        p.add_argument("--port", type=int, required=True)
-        p.add_argument("--output-file", default=None)
-        p.add_argument(
-            "--max-events",
-            type=int,
-            default=None,
-            help="Cleanly exit after emitting N telemetry events.",
-        )
+    sub = parser.add_subparsers(dest="command")
 
-    run_ssh = sub.add_parser("run-ssh")
-    _add_run_common(run_ssh)
-
-    run_http = sub.add_parser("run-http")
-    _add_run_common(run_http)
-
-    run_api = sub.add_parser("run-api")
-    _add_run_common(run_api)
-
-    run_ftp = sub.add_parser("run-ftp")
-    _add_run_common(run_ftp)
-
-    run_rdp = sub.add_parser("run-rdp")
-    _add_run_common(run_rdp)
+    for cmd in ("run-ssh", "run-http", "run-api", "run-ftp", "run-rdp"):
+        p = sub.add_parser(cmd)
+        p.add_argument("--port", type=int, required=False)
+        p.add_argument("--output-file", required=False)
 
     return parser
 
 
-async def _dispatch(args: argparse.Namespace) -> int:
-    # Local imports to keep startup lean.
-    if args.command == "run-ssh":
-        from cli.run_ssh import run as runner
-    elif args.command == "run-http":
-        from cli.run_http import run as runner
-    elif args.command == "run-api":
-        from cli.run_api import run as runner
-    elif args.command == "run-ftp":
-        from cli.run_ftp import run as runner
-    elif args.command == "run-rdp":
-        from cli.run_rdp import run as runner
-    else:
-        raise SystemExit(f"Unknown command: {args.command}")
-
-    return await _run_with_max_events(runner, args)
-
-
-def main(argv: Optional[list[str]] = None) -> int:
-    parser = _build_parser()
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
     args = parser.parse_args(argv)
-    return asyncio.run(_dispatch(args))
+
+    # Placeholder demo event path to represent shared serialization behavior.
+    event = {
+        "event_type": "startup",
+        "service": args.command or "unknown",
+        "timestamp": datetime.now(tz=timezone.utc).timestamp(),
+    }
+    sys.stdout.write(serialize_event(event, timestamp_format=args.event_timestamp_format) + "\n")
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
