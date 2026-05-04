@@ -52,11 +52,14 @@ honeypot run-ftp --port 2121 --banner "Microsoft FTP Service" --output-file even
 # Start RDP banner observer on port 3389
 honeypot run-rdp --port 3389 --output-file events.jsonl
 
+# Emit event timestamps in RFC3339 UTC instead of unix epoch seconds
+honeypot --event-timestamp-format rfc3339 run-http --port 8080 --output-file events.jsonl
+
 # Force flush after each JSONL line (stdout and file sinks)
 # Tradeoff: higher I/O overhead for safer durability during abrupt restarts
 honeypot run-http --port 8080 --output-file events.jsonl --output-line-buffered
 
 # Periodically fsync JSONL file for stronger crash/node-failure durability
 # Recommended in high-assurance logging environments (extra disk I/O overhead)
-honeypot run-http --port 8080 --output-file events.jsonl --jsonl-fsync-interval 2
+honeypot run-http --port 8080 --output-file even
 ```
