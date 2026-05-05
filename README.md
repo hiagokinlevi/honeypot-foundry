@@ -59,7 +59,14 @@ honeypot --event-timestamp-format rfc3339 run-http --port 8080 --output-file eve
 # Tradeoff: higher I/O overhead for safer durability during abrupt restarts
 honeypot run-http --port 8080 --output-file events.jsonl --output-line-buffered
 
-# Periodically fsync JSONL file for stronger crash/node-failure durability
-# Recommended in high-assurance logging environments (extra disk I/O overhead)
-honeypot run-http --port 8080 --output-file even
+# Flush file buffer every 25 events (default is 100)
+# Tradeoff: smaller data-loss window vs additional flush overhead
+honeypot run-http --port 8080 --output-file events.jsonl --output-file-sync-every 25
 ```
+
+### Output buffering notes
+
+- `--output-file-sync-every` controls deterministic periodic flush cadence for JSONL file output.
+- Default is `100` events.
+- Lower values reduce potential buffered data loss on abrupt termination, but increase I/O overhead.
+- `--output-line-buffered` still flushes every line and effectively overrides periodic cadence behavior.
