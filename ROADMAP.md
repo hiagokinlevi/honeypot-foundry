@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add `--source-ip-allow-cidrs` CLI flag for listener-level ingress filtering (cycle 55)
+- [x] Add `--output-file-sync-every` CLI flag for periodic flush cadence (cycle 56)
