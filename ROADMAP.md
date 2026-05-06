@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add `--output-file-sync-every` CLI flag for periodic flush cadence (cycle 56)
+- [x] Add `--siem-forward-timeout-seconds` CLI flag for outbound SIEM requests (cycle 57)
