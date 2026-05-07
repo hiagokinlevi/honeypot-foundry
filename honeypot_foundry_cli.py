@@ -1,52 +1,86 @@
 #!/usr/bin/env python3
-"""honeypot CLI entrypoint."""
+"""honeypot_foundry_cli.py
+
+Main CLI entrypoint for honeypot-foundry.
+"""
 
 from __future__ import annotations
 
 import argparse
-from typing import Any, Dict
+import json
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, TextIO
+
+
+@dataclass
+class JsonlOutputWriter:
+    stdout: TextIO
+    output_file: str | None = None
+    output_file_fallback_stdout_on_error: bool = False
+    _fh: TextIO | None = None
+    _file_disabled: bool = False
+    _warned_once: bool = False
+
+    def __post_init__(self) -> None:
+        if self.output_file:
+            self._fh = Path(self.output_file).open("a", encoding="utf-8")
+
+    def emit(self, event: dict[str, Any]) -> None:
+        line = json.dumps(event, separators=(",", ":"), ensure_ascii=False)
+        self.stdout.write(line + "\n")
+        self.stdout.flush()
+
+        if not self._fh or self._file_disabled:
+            return
+
+        try:
+            self._fh.write(line + "\n")
+            self._fh.flush()
+        except Exception as exc:  # pragma: no cover - explicit behavior tested via monkeypatch
+            if not self.output_file_fallback_stdout_on_error:
+                raise
+            self._file_disabled = True
+            if not self._warned_once:
+                self._warned_once = True
+                warning = {
+                    "event_type": "metric.output_file_write_error_fallback_stdout",
+                    "level": "warning",
+                    "message": "output file write failed; disabling file sink and continuing with stdout",
+                    "error": str(exc),
+                    "output_file": self.output_file,
+                }
+                self.stdout.write(json.dumps(warning, separators=(",", ":"), ensure_ascii=False) + "\n")
+                self.stdout.flush()
+
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="honeypot")
+    parser.add_argument("--output-file", default=None)
     parser.add_argument(
-        "--siem-forward-timeout-seconds",
-        type=float,
-        default=5.0,
+        "--output-file-fallback-stdout-on-error",
+        action="store_true",
         help=(
-            "Timeout in seconds for outbound SIEM forwarding network calls "
-            "(e.g., Splunk HEC, Elastic bulk). Default: 5.0"
+            "If set, keep service running and continue stdout output when JSONL file writes fail. "
+            "Default is fail-fast."
         ),
     )
-
-    subparsers = parser.add_subparsers(dest="command", required=True)
-    run_http = subparsers.add_parser("run-http")
-    run_http.add_argument("--port", type=int, default=8080)
-    run_http.add_argument("--output-file", default="events.jsonl")
-
     return parser
 
 
-def build_forwarder_config(args: argparse.Namespace) -> Dict[str, Any]:
-    return {
-        "siem_forward_timeout_seconds": args.siem_forward_timeout_seconds,
-    }
-
-
-def _post_splunk_event(session: Any, endpoint: str, payload: Dict[str, Any], timeout_seconds: float) -> Any:
-    return session.post(endpoint, json=payload, timeout=timeout_seconds)
-
-
-def _post_elastic_bulk(session: Any, endpoint: str, data: str, timeout_seconds: float) -> Any:
-    return session.post(endpoint, data=data, timeout=timeout_seconds)
-
-
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    _ = build_forwarder_config(args)
-    # Existing runtime dispatch omitted for brevity in this task-focused update.
+    writer = JsonlOutputWriter(
+        stdout=sys.stdout,
+        output_file=args.output_file,
+        output_file_fallback_stdout_on_error=args.output_file_fallback_stdout_on_error,
+    )
+
+    writer.emit({"event_type": "startup", "ok": True})
     return 0
 
 
