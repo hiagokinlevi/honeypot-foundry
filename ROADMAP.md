@@ -41,4 +41,4 @@
 - [x] Support static honeypot instance_id tagging (cycle 32)
 - [x] Add optional `--bind-host` CLI flag for all honeypot run commands (cycle 33)
 - [
-- [x] Add --event-schema-strict CLI flag to drop invalid events before emit/forward (cycle 60)
+- [x] Add --source-ip-deny-cidrs CLI flag for pre-accept connection filtering (cycle 61)
